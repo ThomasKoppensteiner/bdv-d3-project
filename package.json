@@ -1,0 +1,33 @@
+{
+  "name": "bdv-d3-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThomasKoppensteiner/bdv-d3-project.git"
+  },
+  "authors": [
+    "Markus Dietrich",
+    "Thomas Koppensteiner"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ThomasKoppensteiner/bdv-d3-project/issues"
+  },
+  "homepage": "https://github.com/ThomasKoppensteiner/bdv-d3-project#readme",
+  "dependencies": {
+    "d3": "^4.4.0"
+  },
+  "devDependencies": {
+    "http-server": "^0.9.0"
+  },
+  "scripts": [
+    {
+      "start": "http-server"
+    },
+    {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    }
+  ]
+}
