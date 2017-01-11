@@ -14,4 +14,4 @@ While you can view local sites (file:///), Chrome doesn't allow you to load addi
 
 Starting a simple python static webserver: `python -m SimpleHTTPServer`
 
-Open `http://localhost:8000` to explore the project.
+Open [http://localhost:8000](http://localhost:8000) to explore the project.
