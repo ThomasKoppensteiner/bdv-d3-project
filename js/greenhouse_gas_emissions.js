@@ -222,7 +222,7 @@ setupMainChart();
 setupCountryChart();
 setupTotalChart();
 
-d3.json('../data/GHG_1990_2014.json', (error, data) => {
+d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
     updateAll(data);
 });
