@@ -16,10 +16,6 @@
     "url": "https://github.com/ThomasKoppensteiner/bdv-d3-project/issues"
   },
   "homepage": "https://github.com/ThomasKoppensteiner/bdv-d3-project#readme",
-  "dependencies": {
-    "d3": "^4.4.0",
-    "jquery": "^3.1.1"
-  },
   "devDependencies": {
     "http-server": "^0.9.0"
   },
