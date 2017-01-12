@@ -146,3 +146,5 @@ function update(new_data) {
 //   }
 // }
 // );
+
+//@ sourceURL=greenhouse_gas_emissions.js
