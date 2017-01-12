@@ -1,5 +1,5 @@
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 110, left: 120, right: 20};
+    var mainMargin = {top: 10, bottom: 110, left: 50, right: 20};
     var mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
@@ -11,15 +11,15 @@ function setupMainChart() {
         .attr('transform', `translate(${mainMargin.left},${mainMargin.top})`);
 
     // Scales setup
-    mainXScale = d3.scaleBand().rangeRound([0, mainWidth]).paddingInner(0.1);
+    mainXScale = d3.scaleLinear().range([0, mainWidth-mainMargin.right]).domain([1990,2014]);
     mainYScale = d3.scaleLinear().range([0, mainHeight]);
 
     // Axis setup
     mainXAxis = d3.axisBottom().scale(mainXScale);
-    mainGXAxis = mainG.append('g').attr("transform", `translate(0,${mainHeight})`).attr('class', 'x axis');
+    mainGXAxis = mainG.append('g').attr("transform", `translate(0,${mainHeight})`).attr('class', 'x axis').call(mainXAxis);
 
     mainYAxis = d3.axisLeft().scale(mainYScale);
-    mainGYAxis = mainG.append('g').attr('class', 'y axis');
+    mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
 }
 
 function setupCountryChart() {
@@ -88,6 +88,14 @@ function updateAll(data) {
     updateCountry(main_data);
 }
 
+var lineGen = d3.line()
+    .x(function(d) {
+        return mainXScale(d.year);
+    })
+    .y(function(d) {
+        return mainYScale(d.value);
+    });
+
 function updateMain(new_data) {
     //update the scales
     mainXScale.domain(new_data.map((d) => d.country));
@@ -105,30 +113,23 @@ function updateMain(new_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const rect = mainG.selectAll('rect').data(new_data, (d) => d.country);
+    const path = mainG.selectAll('path.line').data(new_data, (d) => d.country);
 
     // ENTER
     // new elements
-    const rect_enter = rect.enter().append('rect')
-        .attr('x', 0) //set intelligent default values for animation
-        .attr('y', 0)
-        .attr('width', 0)
-        .attr('height', 0);
-    rect_enter.append('title');
+    const path_enter = path.enter().append('path')
+        .attr('stroke', "green") //set intelligent default values for animation
+        .attr('stroke-width', 2)
+        .attr('fill', 'none');
 
     // ENTER + UPDATE
     // both old and new elements
-    rect.merge(rect_enter).transition()
-        .attr('height', (d) => mainYScale(max_value - d.value))
-        .attr('width', mainXScale.bandwidth())
-        .attr('y', (d) => mainHeight - mainYScale(max_value - d.value))
-        .attr('x', (d) => mainXScale(d.country));
-
-    rect.merge(rect_enter).select('title').text((d) => d.country);
+    path.merge(path_enter).transition()
+        .attr('d', (d) => {console.debug(lineGen(d)); lineGen(d)});
 
     // EXIT
     // elements that aren't associated with data
-    rect.exit().remove();
+    path.exit().remove();
 }
 
 function updateCountry(new_data) {
