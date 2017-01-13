@@ -6,7 +6,7 @@ var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, c
 var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG;
 
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 90, left: 150, right: 25};
+    var mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
     mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
@@ -27,6 +27,25 @@ function setupMainChart() {
 
     mainYAxis = d3.axisLeft().scale(mainYScale);
     mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
+
+    // text label for the x axis
+    mainG.append("text")
+        .attr("class", "axis-label main")
+        .attr("transform",
+            "translate(" + (mainWidth/2) + " ," +
+            (mainHeight +  mainMargin.bottom) + ")")
+        .style("text-anchor", "middle")
+        .text("Year");
+
+    // text label for the y axis
+    mainG.append("text")
+        .attr("class", "axis-label main")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 10 - mainMargin.left)
+        .attr("x",0 - (mainHeight / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .text("Tonnes of CO2 equivalent, Thousands");
 
     createOverlay();
 }
@@ -158,7 +177,7 @@ function setupCountryChart() {
     countryXAxis = d3.axisBottom().scale(countryXScale);
     countryGXAxis = countryG.append('g').attr("transform", `translate(0,${countryHeight})`).attr('class', 'x axis');
 
-    countryYAxis = d3.axisLeft().scale(countryYScale);
+    countryYAxis = d3.axisLeft().scale(countryYScale).tickFormat(function(d){return d+ "%"});
     countryGYAxis = countryG.append('g').attr('class', 'y axis');
 }
 
@@ -182,7 +201,7 @@ function setupTotalChart() {
     totalXAxis = d3.axisBottom().scale(totalXScale);
     totalGXAxis = totalG.append('g').attr("transform", `translate(0,${totalHeight})`).attr('class', 'x axis');
 
-    totalYAxis = d3.axisLeft().scale(totalYScale);
+    totalYAxis = d3.axisLeft().scale(totalYScale).tickFormat(function(d){return d+ "%"});
     totalGYAxis = totalG.append('g').attr('class', 'y axis');
 }
 
