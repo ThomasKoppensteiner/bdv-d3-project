@@ -88,6 +88,7 @@ var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis,
 
 // Global variable for all data
 var data;
+var dbg;
 
 function updateAll(data) {
     self.data = data;
@@ -101,18 +102,21 @@ function updateAll(data) {
         function (key, g) {
             var result = {
                 year: key,
-                avg: g.Sum("$.value") / g.source.length
+                value: g.Sum("$.value") / g.source.length
             };
             return result;
         }).ToArray();
 
-    main_selected = data.filter((d) => d.country === 'Austria' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+    dbg = main_grouped;
+    var main_selected = data.filter((d) => d.country === 'Austria' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+
     updateMain(main_grouped, main_selected);
     updateTotal(main_all);
     updateCountry(main_all);
 }
 
 var lineGen = d3.line()
+    .curve(d3.curveCatmullRomOpen)
     .x(function(d) {
         return mainXScale(d.year);
     })
@@ -122,7 +126,7 @@ var lineGen = d3.line()
 
 function updateMain(all_data, selected_data) {
     //update the scales
-    mainXScale.domain(all_data.map((d) => d.country));
+    //mainXScale.domain(all_data.map((d) => d.country));
 
     var max_value = d3.max(all_data, (d) => d.value)
 
@@ -137,19 +141,19 @@ function updateMain(all_data, selected_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const path = mainG.selectAll('path.line').data(all_data, (d) => d.country);
+    const path = mainG.selectAll('path.line').data([all_data], (d) => d.year);
 
     // ENTER
     // new elements
-    const path_enter = path.enter().append('path')
+    const path_enter = path.enter().append('svg:path')
         .attr('stroke', "green") //set intelligent default values for animation
-        .attr('stroke-width', 2)
+        .attr('stroke-width', 3)
         .attr('fill', 'none');
 
     // ENTER + UPDATE
     // both old and new elements
-    path.merge(path_enter).transition();
-        // .attr('d', (d) => wtf(d));
+    path.merge(path_enter).transition()
+        .attr('d', (d) => lineGen(d));
 
     // EXIT
     // elements that aren't associated with data
