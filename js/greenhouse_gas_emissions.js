@@ -9,7 +9,7 @@ Array.prototype.groupBy = function(prop) {
 
 function setupMainChart() {
     var mainMargin = {top: 10, bottom: 90, left: 150, right: 20};
-    var mainWidth = 800 - mainMargin.left - mainMargin.right;
+    mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
     // Creates sources <svg> element
@@ -30,14 +30,15 @@ function setupMainChart() {
     mainYAxis = d3.axisLeft().scale(mainYScale);
     mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
 
-    mainSvg.append("path") // this is the black vertical line to follow mouse
+    // this is the black vertical line to follow the mouse
+    mainG.append("path")
         .attr("class","mouseLine")
         .style("stroke","black")
         .style("stroke-width", "1px")
         .style("opacity", "0");
 
-
-    var bisect = d3.bisector(function(d) { return d.Year; }).right; // reusable bisect to find points before/after line
+    // reusable bisect to find points before/after line
+    var bisect = d3.bisector(function(d) { return d.Year; }).right;
 
     mainG.append('svg:rect') // append a rect to catch mouse movements on canvas
         .attr('class', 'overlay')
@@ -146,7 +147,7 @@ function setupTotalChart() {
 }
 
 // Global vars for main chart, needed in other functions
-var mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG;
+var mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG;
 // Global vars for country chart, needed in other functions
 var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG;
 // Global vars for total chart, needed in other functions
@@ -234,6 +235,8 @@ function updateMain(allData, selectedData) {
     // EXIT
     totalPath.exit().remove();
     selectedPath.exit().remove();
+
+    updateLegend();
 }
 
 function updateCountry(newData) {
@@ -320,6 +323,35 @@ function updateTotal(newData) {
     // EXIT
     // elements that aren't associated with data
     rect.exit().remove();
+}
+
+function updateLegend(){
+    const legendItems = [ { title: 'total', color: "red" }, { title: getSelectorValue('#selected-country'), color: "green" } ];
+    const legendRect = mainG.selectAll('.legendRect').data(legendItems);
+    const legendRectEnter = legendRect.enter().append('rect').attr('class', 'legendRect');
+    legendRect.merge(legendRectEnter)
+        .attr('x', mainWidth - 120)
+        .attr('y', function(d, i){
+            return i * 20;
+        })
+        .attr('width', 10)
+        .attr('height', 10)
+        .style('fill', function(d) {
+            return d.color;
+        });
+
+    const legendText = mainG.selectAll('.legendText').data(legendItems);
+    const legendTextEnter = legendText.enter().append('text').attr('class', 'legendText');
+    legendText.merge(legendTextEnter)
+        .attr('x', mainWidth - 96)
+        .attr('y', function(d, i) {
+            return (i * 20) + 9;
+        })
+        .text(function(d) {
+            return d.title;
+        });
+    legendRect.exit().remove();
+    legendText.exit().remove();
 }
 
 function fillSelector(data, id, valueSelector){

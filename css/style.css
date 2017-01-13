@@ -42,3 +42,7 @@ rect:hover {
     fill: none;
     stroke: steelblue;
 }
+
+.legendText{
+    font-size: 14px;
+}
