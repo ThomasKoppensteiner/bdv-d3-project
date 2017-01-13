@@ -46,3 +46,8 @@ rect:hover {
 .legendText{
     font-size: 14px;
 }
+
+text{
+    font-size: 12px;
+    fill: black;
+}
