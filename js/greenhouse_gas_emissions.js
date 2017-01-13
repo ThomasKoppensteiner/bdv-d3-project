@@ -107,7 +107,8 @@ function createOverlay(){
                     });
             };
 
-            selectText(".mouse-circle-total", "total");
+            selectText(".mouse-circle-mean", "mean");
+            selectText(".mouse-circle-median", "median");
             selectText(".mouse-circle-selected", "selected");
         })
         .on('click', function() {
@@ -119,27 +120,22 @@ function createOverlay(){
 }
 
 function createMouseCircles(){
-    const total = mouseG.append('g').attr('class', 'mouse-circle mouse-circle-total');
-    total.append('circle')
-        .attr('r', 7)
-        .style('stroke', 'green')
-        .style("fill", "none")
-        .style("stroke-width", "1px")
-        .style("opacity", "0");
+    var createCircle = function(spec, color){
+        const circle = mouseG.append('g').attr('class', 'mouse-circle ' + spec);
+        circle.append('circle')
+            .attr('r', 7)
+            .style('stroke', color)
+            .style("fill", "none")
+            .style("stroke-width", "1px")
+            .style("opacity", "0");
 
-    total.append('text')
-        .attr("transform", "translate(10,3)");
+        circle.append('text')
+            .attr("transform", "translate(10,3)");
+    };
 
-    const selected = mouseG.append('g').attr('class', 'mouse-circle mouse-circle-selected');
-    selected.append('circle')
-        .attr('r', 7)
-        .style('stroke', 'red')
-        .style("fill", "none")
-        .style("stroke-width", "1px")
-        .style("opacity", "0");
-
-    selected.append('text')
-        .attr("transform", "translate(10,3)");
+    createCircle("mouse-circle-mean", "green");
+    createCircle("mouse-circle-median", "blue");
+    createCircle("mouse-circle-selected", "red");
 }
 
 function setupCountryChart() {
@@ -203,12 +199,12 @@ function updateAll(data, selCountry, selPollutant) {
         function (key, g) {
             var result = {
                 year: key,
-                value: g.Sum("$.value") / g.source.length
+                median: d3.median(g.source, v => v.value),
+                mean: d3.mean(g.source, v => v.value),
             };
             return result;
         }).ToArray();
 
-    dbg = mainGrouped;
     var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL');
 
     updateMain(mainGrouped, mainSelected);
@@ -227,11 +223,8 @@ var lineGen = d3.line()
 
 function updateMain(allData, selectedData) {
     //update the scales
-    //mainXScale.domain(allData.map((d) => d.country));
-
-    var maxAllValue = d3.max(allData, (d) => d.value);
+    var maxAllValue = d3.max(allData, (d) => d.mean);
     var maxSelectedValue = d3.max(selectedData, (d) => d.value);
-
 
     mainYScale.domain([Math.max(maxAllValue, maxSelectedValue), 0]);
     //render the axis
@@ -239,37 +232,35 @@ function updateMain(allData, selectedData) {
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .attr("transform", "rotate(-65)");
-    ;
+
     mainGYAxis.call(mainYAxis);
 
-    // Render the chart with new data
-    // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
-    const totalPath = mainG.selectAll('.total').data([allData], (d) => d.year);
-    const selectedPath = mainG.selectAll('.selected').data([selectedData], d => d.year);
+    var enterUpdateMerge = function(c, data, color){
+        const path = mainG.selectAll('.'+c).data([data], (d) => d.year);
+        const pathEnter = path.enter().append('svg:path')
+            .attr('class', c)
+            .attr('stroke', color) //set intelligent default values for animation
+            .attr('stroke-width', 2)
+            .attr('fill', 'none');
 
-    // ENTER
-    const totalPathEnter = totalPath.enter().append('svg:path')
-        .attr('class', 'total')
-        .attr('stroke', "green") //set intelligent default values for animation
-        .attr('stroke-width', 2)
-        .attr('fill', 'none');
+        path.merge(pathEnter).transition().attr('d', (d) => lineGen(d));
+        path.exit().remove();
 
-    const selectedPathEnter = selectedPath.enter().append('svg:path')
-        .attr('class', 'selected')
-        .attr('stroke', 'red')
-        .attr('stroke-width', 2)
-        .attr('fill', 'none');
+    };
 
+    const totalMeanData = allData.map(function(e) { return {
+        year: e.year,
+        value: e.mean};
+    });
 
-    // ENTER + UPDATE
-    totalPath.merge(totalPathEnter).transition().attr('d', (d) => lineGen(d));
+    const totalMedianData = allData.map(function(e) { return {
+        year: e.year,
+        value: e.median};
+    });
 
-    selectedPath.merge(selectedPathEnter).transition().attr('d', (d) => lineGen(d));
-
-    // EXIT
-    totalPath.exit().remove();
-    selectedPath.exit().remove();
-
+    enterUpdateMerge('mean', totalMeanData, 'green');
+    enterUpdateMerge('median', totalMedianData, 'blue');
+    enterUpdateMerge('selected', selectedData, 'red');
     updateLegend();
 }
 
@@ -360,7 +351,11 @@ function updateTotal(newData) {
 }
 
 function updateLegend(){
-    const legendItems = [ { title: 'total', color: "green" }, { title: getSelectorValue('#selected-country'), color: "red" } ];
+    const legendItems = [
+        { title: 'Global mean', color: "green" },
+        { title: 'Global median', color: "blue" },
+        { title: getSelectorValue('#selected-country'), color: "red" }];
+
     const legendRect = mainG.selectAll('.legendRect').data(legendItems);
     const legendRectEnter = legendRect.enter().append('rect').attr('class', 'legendRect');
     legendRect.merge(legendRectEnter)
