@@ -1,15 +1,13 @@
-Array.prototype.groupBy = function(prop) {
-    return this.reduce(function(groups, item) {
-        var val = item[prop];
-        groups[val] = groups[val] || [];
-        groups[val].push(item);
-        return groups;
-    }, {});
-}
+// Global vars for main chart, needed in other functions
+var mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
+// Global vars for country chart, needed in other functions
+var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG;
+// Global vars for total chart, needed in other functions
+var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG;
 
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 90, left: 150, right: 20};
-    var mainWidth = 800 - mainMargin.left - mainMargin.right;
+    var mainMargin = {top: 10, bottom: 90, left: 150, right: 25};
+    mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
     // Creates sources <svg> element
@@ -30,71 +28,118 @@ function setupMainChart() {
     mainYAxis = d3.axisLeft().scale(mainYScale);
     mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
 
-    mainSvg.append("path") // this is the black vertical line to follow mouse
-        .attr("class","mouseLine")
+    createOverlay();
+}
+
+function createOverlay(){
+    mouseG = mainG.append('g').attr('class', 'overlay');
+
+    // this is the black vertical line to follow the mouse
+    mouseG.append("path")
+        .attr("class","mouse-line")
         .style("stroke","black")
         .style("stroke-width", "1px")
         .style("opacity", "0");
 
+    createMouseCircles();
 
-    var bisect = d3.bisector(function(d) { return d.Year; }).right; // reusable bisect to find points before/after line
-
-    mainG.append('svg:rect') // append a rect to catch mouse movements on canvas
+    // rect to catch mouse movements on canvas
+    mouseG.append('svg:rect')
         .attr('class', 'overlay')
-        .attr('width', mainWidth) // can't catch mouse events on a g element
+        .attr('width', mainWidth - 25)
         .attr('height', mainHeight)
         .attr('fill', 'none')
         .attr('pointer-events', 'all')
-        .on('mouseout', function(){ // on mouse out hide line, circles and text
-            d3.select(".mouseLine")
+        .on('mouseout', function(){
+            d3.select(".mouse-line")
                 .style("opacity", "0");
-            d3.selectAll(".mouseCircle circle")
+            d3.selectAll(".mouse-circle circle")
                 .style("opacity", "0");
-            d3.selectAll(".mouseCircle text")
+            d3.selectAll(".mouse-circle text")
                 .style("opacity", "0");
         })
         .on('mouseover', function(){ // on mouse in show line, circles and text
-            d3.select(".mouseLine")
+            d3.select(".mouse-line")
                 .style("opacity", "1");
-            d3.selectAll(".mouseCircle circle")
+            d3.selectAll(".mouse-circle circle")
                 .style("opacity", "1");
-            d3.selectAll(".mouseCircle text")
+            d3.selectAll(".mouse-circle text")
                 .style("opacity", "1");
         })
         .on('mousemove', function() { // mouse moving over canvas
-            d3.select(".mouseLine")
+            var mouse = d3.mouse(this);
+
+            // vertical ruler
+            d3.select(".mouse-line")
                 .attr("d", function(){
                     yRange = mainYScale.range(); // range of y axis
                     var xCoor = d3.mouse(this)[0]; // mouse position in x
-                    var xDate = mainXScale.invert(xCoor); // date corresponding to mouse x
-                    d3.selectAll('.mouseCircle') // for each circle group
-                        .each(function(d,i){
-                            var rightIdx = bisect(data[1].values, xDate); // find date in data that right off mouse
-                            /*
-                             var interSect = get_line_intersection(xCoor,  // get the intersection of our vertical line and the data line
-                             yRange[0],
-                             xCoor,
-                             yRange[1],
-                             x(data[i].values[rightIdx-1].YEAR),
-                             y(data[i].values[rightIdx-1].VALUE),
-                             x(data[i].values[rightIdx].YEAR),
-                             y(data[i].values[rightIdx].VALUE));
-                             */
-
-                            yVal = data[i].values[rightIdx-1].VALUE;
-                            yCoor = y(yVal);
-
-                            d3.select(this) // move the circle to intersection
-                                .attr('transform', 'translate(' + xCoor + ',' + yCoor + ')');
-
-                            d3.select(this.children[0]) // write coordinates out
-                                .text((xDate.getFullYear()) + " , " + yVal);
-
-                        });
-
-                    return "M"+ xCoor +"," + yRange[0] + "L" + xCoor + "," + yRange[1]; // position vertical line
+                    return "M"+ xCoor +"," + yRange[0] + "L" + xCoor + "," + yRange[1];
                 });
+
+            // circles and text
+            var selectText = function(s, c) {
+                d3.selectAll(s)
+                    .attr("transform", function(d, i) {
+                        var xYear = mainXScale.invert(mouse[0]),
+                            bisect = d3.bisector(function(d) { return d.year; }).right;
+
+                        var line = document.getElementsByClassName(c)[0];
+                        var beginning = 0,
+                            end = line.getTotalLength(),
+                            target = null;
+
+                        while (true){
+                            target = Math.floor((beginning + end) / 2);
+                            pos = line.getPointAtLength(target);
+                            if ((target === end || target === beginning) && pos.x !== mouse[0]) {
+                                break;
+                            }
+                            if (pos.x > mouse[0])      end = target;
+                            else if (pos.x < mouse[0]) beginning = target;
+                            else break;
+                        }
+
+                        d3.select(this).select('text')
+                            .text(mainYScale.invert(pos.y).toFixed());
+
+                        return "translate(" + mouse[0] + "," + pos.y +")";
+                    });
+            };
+
+            selectText(".mouse-circle-total", "total");
+            selectText(".mouse-circle-selected", "selected");
+        })
+        .on('click', function() {
+            var xYear = mainXScale.invert(d3.mouse(this)[0]).toFixed();
+            var country = getSelectorValue('#selected-country');
+            // TODO - call update method for smaller charts
+            console.debug(country + '-' + xYear);
         });
+}
+
+function createMouseCircles(){
+    const total = mouseG.append('g').attr('class', 'mouse-circle mouse-circle-total');
+    total.append('circle')
+        .attr('r', 7)
+        .style('stroke', 'green')
+        .style("fill", "none")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+
+    total.append('text')
+        .attr("transform", "translate(10,3)");
+
+    const selected = mouseG.append('g').attr('class', 'mouse-circle mouse-circle-selected');
+    selected.append('circle')
+        .attr('r', 7)
+        .style('stroke', 'red')
+        .style("fill", "none")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+
+    selected.append('text')
+        .attr("transform", "translate(10,3)");
 }
 
 function setupCountryChart() {
@@ -145,16 +190,6 @@ function setupTotalChart() {
     totalGYAxis = totalG.append('g').attr('class', 'y axis');
 }
 
-// Global vars for main chart, needed in other functions
-var mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG;
-// Global vars for country chart, needed in other functions
-var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG;
-// Global vars for total chart, needed in other functions
-var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG;
-
-// Global variable for all data
-var data;
-var dbg;
 
 var TEMP_YEAR=1990;
 
@@ -253,6 +288,8 @@ function updateMain(allData, selectedData) {
     // EXIT
     totalPath.exit().remove();
     selectedPath.exit().remove();
+
+    updateLegend();
 }
 
 function updateCountry(newData) { 
@@ -303,6 +340,35 @@ function updatePollutionPercentChart(svgGroup, xScale, yScale, gXAxis, gYAxis, x
     // EXIT
     // elements that aren't associated with data
     rect.exit().remove();
+}
+
+function updateLegend(){
+    const legendItems = [ { title: 'total', color: "green" }, { title: getSelectorValue('#selected-country'), color: "red" } ];
+    const legendRect = mainG.selectAll('.legendRect').data(legendItems);
+    const legendRectEnter = legendRect.enter().append('rect').attr('class', 'legendRect');
+    legendRect.merge(legendRectEnter)
+        .attr('x', mainWidth - 120)
+        .attr('y', function(d, i){
+            return i * 20;
+        })
+        .attr('width', 10)
+        .attr('height', 10)
+        .style('fill', function(d) {
+            return d.color;
+        });
+
+    const legendText = mainG.selectAll('.legendText').data(legendItems);
+    const legendTextEnter = legendText.enter().append('text').attr('class', 'legendText');
+    legendText.merge(legendTextEnter)
+        .attr('x', mainWidth - 96)
+        .attr('y', function(d, i) {
+            return (i * 20) + 9;
+        })
+        .text(function(d) {
+            return d.title;
+        });
+    legendRect.exit().remove();
+    legendText.exit().remove();
 }
 
 function fillSelector(data, id, valueSelector){
