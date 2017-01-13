@@ -27,3 +27,7 @@ rect:hover {
 .axis {
     font-size: smaller;
 }
+
+#main-chart p {
+    margin: 5px 10px;
+}

@@ -90,9 +90,9 @@ var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis,
 var data;
 var dbg;
 
-function updateAll(data) {
+function updateAll(data, sel_country, sel_pollutant) {
     self.data = data;
-    var main_all = data.filter((d) => d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL')
+    var main_all = data.filter((d) => d.pollutant === sel_pollutant && d.variable === 'TOTAL')
                        .map(function(e) { return {
                            year: e.year,
                            value: e.value};
@@ -108,7 +108,7 @@ function updateAll(data) {
         }).ToArray();
 
     dbg = main_grouped;
-    var main_selected = data.filter((d) => d.country === 'United States' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+    var main_selected = data.filter((d) => d.country === sel_country && d.pollutant === sel_pollutant && d.variable === 'TOTAL');
 
     updateMain(main_grouped, main_selected);
     updateTotal(main_all);
@@ -128,7 +128,7 @@ function updateMain(all_data, selected_data) {
     //update the scales
     //mainXScale.domain(all_data.map((d) => d.country));
 
-    var max_all_value = d3.max(selected_data, (d) => d.value);
+    var max_all_value = d3.max(all_data, (d) => d.value);
     var max_selected_value = d3.max(selected_data, (d) => d.value);
 
 
@@ -143,16 +143,18 @@ function updateMain(all_data, selected_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const total_path = mainG.selectAll('path.line').data([all_data], (d) => d.year);
-    const selected_path = mainG.selectAll('path.line').data([selected_data], d => d.year);
+    const total_path = mainG.selectAll('.total').data([all_data], (d) => d.year);
+    const selected_path = mainG.selectAll('.selected').data([selected_data], d => d.year);
 
     // ENTER
     const total_path_enter = total_path.enter().append('svg:path')
+        .attr('class', 'total')
         .attr('stroke', "green") //set intelligent default values for animation
         .attr('stroke-width', 2)
         .attr('fill', 'none');
 
     const selected_path_enter = selected_path.enter().append('svg:path')
+        .attr('class', 'selected')
         .attr('stroke', 'red')
         .attr('stroke-width', 2)
         .attr('fill', 'none');
@@ -256,6 +258,35 @@ function updateTotal(new_data) {
     rect.exit().remove();
 }
 
+function fillSelector(data, id, value_selector){
+    var filtered_data = Enumerable.From(data.map(value_selector)).Distinct().ToArray();
+    var options = d3.select(id).selectAll('option').data(filtered_data);
+    var options_enter = options.enter().append('option')
+        .attr('value', c => c)
+        .text(c => c);
+    options.merge(options_enter);
+    options.exit().remove();
+}
+
+function fillSelectors(data){
+    fillSelector(data, '#selected-country', d => d.country);
+    fillSelector(data, '#selected-pollutant', d => d.pollutant);
+}
+
+function initChangeHandlers() {
+    d3.select('#selected-country').on("change", function(){
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
+    });
+
+    d3.select('#selected-pollutant').on("change", function(){
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
+    });
+}
+
+function getSelectorValue(selector){
+    return d3.select(selector).property("value");
+}
+
 // Setup charts
 setupMainChart();
 setupCountryChart();
@@ -263,5 +294,7 @@ setupTotalChart();
 
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
-    updateAll(data);
+    fillSelectors(data);
+    updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
+    initChangeHandlers();
 });
