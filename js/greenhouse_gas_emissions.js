@@ -156,15 +156,15 @@ var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis,
 var data;
 var dbg;
 
-function updateAll(data, sel_country, sel_pollutant) {
+function updateAll(data, selCountry, selPollutant) {
     self.data = data;
-    var main_all = data.filter((d) => d.pollutant === sel_pollutant && d.variable === 'TOTAL')
+    var mainAll = data.filter((d) => d.pollutant === selPollutant && d.variable === 'TOTAL')
                        .map(function(e) { return {
                            year: e.year,
                            value: e.value};
                        });
 
-    var main_grouped = Enumerable.From(main_all).GroupBy("$.year", null,
+    var mainGrouped = Enumerable.From(mainAll).GroupBy("$.year", null,
         function (key, g) {
             var result = {
                 year: key,
@@ -173,12 +173,12 @@ function updateAll(data, sel_country, sel_pollutant) {
             return result;
         }).ToArray();
 
-    dbg = main_grouped;
-    var main_selected = data.filter((d) => d.country === sel_country && d.pollutant === sel_pollutant && d.variable === 'TOTAL');
+    dbg = mainGrouped;
+    var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL');
 
-    updateMain(main_grouped, main_selected);
-    updateTotal(main_all);
-    updateCountry(main_all);
+    updateMain(mainGrouped, mainSelected);
+    updateTotal(mainAll);
+    updateCountry(mainAll);
 }
 
 var lineGen = d3.line()
@@ -190,15 +190,15 @@ var lineGen = d3.line()
         return mainYScale(d.value);
     });
 
-function updateMain(all_data, selected_data) {
+function updateMain(allData, selectedData) {
     //update the scales
-    //mainXScale.domain(all_data.map((d) => d.country));
+    //mainXScale.domain(allData.map((d) => d.country));
 
-    var max_all_value = d3.max(all_data, (d) => d.value);
-    var max_selected_value = d3.max(selected_data, (d) => d.value);
+    var maxAllValue = d3.max(allData, (d) => d.value);
+    var maxSelectedValue = d3.max(selectedData, (d) => d.value);
 
 
-    mainYScale.domain([Math.max(max_all_value, max_selected_value), 0]);
+    mainYScale.domain([Math.max(maxAllValue, maxSelectedValue), 0]);
     //render the axis
     mainGXAxis.call(mainXAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -208,18 +208,18 @@ function updateMain(all_data, selected_data) {
     mainGYAxis.call(mainYAxis);
 
     // Render the chart with new data
-    // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const total_path = mainG.selectAll('.total').data([all_data], (d) => d.year);
-    const selected_path = mainG.selectAll('.selected').data([selected_data], d => d.year);
+    // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
+    const totalPath = mainG.selectAll('.total').data([allData], (d) => d.year);
+    const selectedPath = mainG.selectAll('.selected').data([selectedData], d => d.year);
 
     // ENTER
-    const total_path_enter = total_path.enter().append('svg:path')
+    const totalPathEnter = totalPath.enter().append('svg:path')
         .attr('class', 'total')
         .attr('stroke', "green") //set intelligent default values for animation
         .attr('stroke-width', 2)
         .attr('fill', 'none');
 
-    const selected_path_enter = selected_path.enter().append('svg:path')
+    const selectedPathEnter = selectedPath.enter().append('svg:path')
         .attr('class', 'selected')
         .attr('stroke', 'red')
         .attr('stroke-width', 2)
@@ -227,24 +227,22 @@ function updateMain(all_data, selected_data) {
 
 
     // ENTER + UPDATE
-    total_path.merge(total_path_enter).transition()
-        .attr('d', (d) => lineGen(d));
+    totalPath.merge(totalPathEnter).transition().attr('d', (d) => lineGen(d));
 
-    selected_path.merge(selected_path_enter).transition()
-        .attr('d', (d) => lineGen(d));
+    selectedPath.merge(selectedPathEnter).transition().attr('d', (d) => lineGen(d));
 
     // EXIT
-    total_path.exit().remove();
-    selected_path.exit().remove();
+    totalPath.exit().remove();
+    selectedPath.exit().remove();
 }
 
-function updateCountry(new_data) {
+function updateCountry(newData) {
     //update the scales
-    countryXScale.domain(new_data.map((d) => d.country));
+    countryXScale.domain(newData.map((d) => d.country));
 
-    var max_value = d3.max(new_data, (d) => d.value)
+    var maxValue = d3.max(newData, (d) => d.value)
 
-    countryYScale.domain([max_value, 0]);
+    countryYScale.domain([maxValue, 0]);
     //render the axis
     countryGXAxis.call(countryXAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -255,39 +253,39 @@ function updateCountry(new_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const rect = countryG.selectAll('rect').data(new_data, (d) => d.country);
+    const rect = countryG.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
     // new elements
-    const rect_enter = rect.enter().append('rect')
+    const rectEnter = rect.enter().append('rect')
         .attr('x', 0) //set intelligent default values for animation
         .attr('y', 0)
         .attr('width', 0)
         .attr('height', 0);
-    rect_enter.append('title');
+    rectEnter.append('title');
 
     // ENTER + UPDATE
     // both old and new elements
-    rect.merge(rect_enter).transition()
-        .attr('height', (d) => countryYScale(max_value - d.value))
+    rect.merge(rectEnter).transition()
+        .attr('height', (d) => countryYScale(maxValue - d.value))
         .attr('width', countryXScale.bandwidth())
-        .attr('y', (d) => countryHeight - countryYScale(max_value - d.value))
+        .attr('y', (d) => countryHeight - countryYScale(maxValue - d.value))
         .attr('x', (d) => countryXScale(d.country));
 
-    rect.merge(rect_enter).select('title').text((d) => d.country);
+    rect.merge(rectEnter).select('title').text((d) => d.country);
 
     // EXIT
     // elements that aren't associated with data
     rect.exit().remove();
 }
 
-function updateTotal(new_data) {
+function updateTotal(newData) {
     //update the scales
-    totalXScale.domain(new_data.map((d) => d.country));
+    totalXScale.domain(newData.map((d) => d.country));
 
-    var max_value = d3.max(new_data, (d) => d.value)
+    var maxValue = d3.max(newData, (d) => d.value)
 
-    totalYScale.domain([max_value, 0]);
+    totalYScale.domain([maxValue, 0]);
     //render the axis
     totalGXAxis.call(totalXAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -298,39 +296,39 @@ function updateTotal(new_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const rect = totalG.selectAll('rect').data(new_data, (d) => d.country);
+    const rect = totalG.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
     // new elements
-    const rect_enter = rect.enter().append('rect')
+    const rectEnter = rect.enter().append('rect')
         .attr('x', 0) //set intelligent default values for animation
         .attr('y', 0)
         .attr('width', 0)
         .attr('height', 0);
-    rect_enter.append('title');
+    rectEnter.append('title');
 
     // ENTER + UPDATE
     // both old and new elements
-    rect.merge(rect_enter).transition()
-        .attr('height', (d) => totalYScale(max_value - d.value))
+    rect.merge(rectEnter).transition()
+        .attr('height', (d) => totalYScale(maxValue - d.value))
         .attr('width', totalXScale.bandwidth())
-        .attr('y', (d) => totalHeight - totalYScale(max_value - d.value))
+        .attr('y', (d) => totalHeight - totalYScale(maxValue - d.value))
         .attr('x', (d) => totalXScale(d.country));
 
-    rect.merge(rect_enter).select('title').text((d) => d.country);
+    rect.merge(rectEnter).select('title').text((d) => d.country);
 
     // EXIT
     // elements that aren't associated with data
     rect.exit().remove();
 }
 
-function fillSelector(data, id, value_selector){
-    var filtered_data = Enumerable.From(data.map(value_selector)).Distinct().ToArray();
-    var options = d3.select(id).selectAll('option').data(filtered_data);
-    var options_enter = options.enter().append('option')
+function fillSelector(data, id, valueSelector){
+    var filteredData = Enumerable.From(data.map(valueSelector)).Distinct().ToArray();
+    var options = d3.select(id).selectAll('option').data(filteredData);
+    var optionsEnter = options.enter().append('option')
         .attr('value', c => c)
         .text(c => c);
-    options.merge(options_enter);
+    options.merge(optionsEnter);
     options.exit().remove();
 }
 
