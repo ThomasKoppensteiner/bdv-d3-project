@@ -8,7 +8,7 @@ Array.prototype.groupBy = function(prop) {
 }
 
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 110, left: 50, right: 20};
+    var mainMargin = {top: 10, bottom: 110, left: 150, right: 20};
     var mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
@@ -24,7 +24,7 @@ function setupMainChart() {
     mainYScale = d3.scaleLinear().range([0, mainHeight]);
 
     // Axis setup
-    mainXAxis = d3.axisBottom().scale(mainXScale);
+    mainXAxis = d3.axisBottom().scale(mainXScale).tickFormat(d3.format("d"));
     mainGXAxis = mainG.append('g').attr("transform", `translate(0,${mainHeight})`).attr('class', 'x axis').call(mainXAxis);
 
     mainYAxis = d3.axisLeft().scale(mainYScale);
@@ -108,7 +108,7 @@ function updateAll(data) {
         }).ToArray();
 
     dbg = main_grouped;
-    var main_selected = data.filter((d) => d.country === 'Austria' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+    var main_selected = data.filter((d) => d.country === 'United States' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
 
     updateMain(main_grouped, main_selected);
     updateTotal(main_all);
@@ -116,7 +116,7 @@ function updateAll(data) {
 }
 
 var lineGen = d3.line()
-    .curve(d3.curveCatmullRomOpen)
+    .curve(d3.curveCatmullRom)
     .x(function(d) {
         return mainXScale(d.year);
     })
@@ -128,9 +128,11 @@ function updateMain(all_data, selected_data) {
     //update the scales
     //mainXScale.domain(all_data.map((d) => d.country));
 
-    var max_value = d3.max(all_data, (d) => d.value)
+    var max_all_value = d3.max(selected_data, (d) => d.value);
+    var max_selected_value = d3.max(selected_data, (d) => d.value);
 
-    mainYScale.domain([max_value, 0]);
+
+    mainYScale.domain([Math.max(max_all_value, max_selected_value), 0]);
     //render the axis
     mainGXAxis.call(mainXAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -141,23 +143,31 @@ function updateMain(all_data, selected_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const path = mainG.selectAll('path.line').data([all_data], (d) => d.year);
+    const total_path = mainG.selectAll('path.line').data([all_data], (d) => d.year);
+    const selected_path = mainG.selectAll('path.line').data([selected_data], d => d.year);
 
     // ENTER
-    // new elements
-    const path_enter = path.enter().append('svg:path')
+    const total_path_enter = total_path.enter().append('svg:path')
         .attr('stroke', "green") //set intelligent default values for animation
-        .attr('stroke-width', 3)
+        .attr('stroke-width', 2)
         .attr('fill', 'none');
 
+    const selected_path_enter = selected_path.enter().append('svg:path')
+        .attr('stroke', 'red')
+        .attr('stroke-width', 2)
+        .attr('fill', 'none');
+
+
     // ENTER + UPDATE
-    // both old and new elements
-    path.merge(path_enter).transition()
+    total_path.merge(total_path_enter).transition()
+        .attr('d', (d) => lineGen(d));
+
+    selected_path.merge(selected_path_enter).transition()
         .attr('d', (d) => lineGen(d));
 
     // EXIT
-    // elements that aren't associated with data
-    path.exit().remove();
+    total_path.exit().remove();
+    selected_path.exit().remove();
 }
 
 function updateCountry(new_data) {
