@@ -51,3 +51,12 @@ text{
     font-size: 12px;
     fill: black;
 }
+
+text.axis-label {
+    font-weight: bold;
+    font-style: italic;
+}
+
+text.axis-label.main {
+    font-size: 18px;
+}
