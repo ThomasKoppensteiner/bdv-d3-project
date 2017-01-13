@@ -98,9 +98,9 @@ function setupMainChart() {
 }
 
 function setupCountryChart() {
-    var countryMargin = {top: 10, bottom: 100, left: 120, right: 20};
+    var countryMargin = {top: 10, bottom: 150, left: 120, right: 20};
     var countryWidth = 450 - countryMargin.left - countryMargin.right;
-    countryHeight = 300 - countryMargin.top - countryMargin.bottom;
+    countryHeight = 350 - countryMargin.top - countryMargin.bottom;
 
     // Creates sources <svg> element
     countryG = d3.select('#sub-country-chart').append('svg')
@@ -156,7 +156,12 @@ var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis,
 var data;
 var dbg;
 
-function updateAll(data, selCountry, selPollutant) {
+var TEMP_YEAR=1990;
+
+var p = Math.max(0, d3.precisionFixed(0.001) - 2),
+    formatPercent = d3.format("." + p + "%");
+
+function updateAll(data, selCountry, selPollutant, selYear) {
     self.data = data;
     var mainAll = data.filter((d) => d.pollutant === selPollutant && d.variable === 'TOTAL')
                        .map(function(e) { return {
@@ -177,8 +182,14 @@ function updateAll(data, selCountry, selPollutant) {
     var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL');
 
     updateMain(mainGrouped, mainSelected);
+
+    var countryPollutionData = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
+    updateCountry(countryPollutionData);
+
+    
     updateTotal(mainAll);
-    updateCountry(mainAll);
+
+    initChangeHandlers();
 }
 
 var lineGen = d3.line()
@@ -238,11 +249,8 @@ function updateMain(allData, selectedData) {
 
 function updateCountry(newData) {
     //update the scales
-    countryXScale.domain(newData.map((d) => d.country));
-
-    var maxValue = d3.max(newData, (d) => d.value)
-
-    countryYScale.domain([maxValue, 0]);
+    countryXScale.domain(newData.map((d) => d.pollutant));
+    countryYScale.domain([100.0, 0]);
     //render the axis
     countryGXAxis.call(countryXAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
@@ -252,7 +260,7 @@ function updateCountry(newData) {
     countryGYAxis.call(countryYAxis);
 
     // Render the chart with new data
-    // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
+    // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
     const rect = countryG.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
@@ -264,15 +272,17 @@ function updateCountry(newData) {
         .attr('height', 0);
     rectEnter.append('title');
 
+    var sumOfPollution = d3.sum(newData, (d) => d.value);
+
     // ENTER + UPDATE
     // both old and new elements
     rect.merge(rectEnter).transition()
-        .attr('height', (d) => countryYScale(maxValue - d.value))
+        .attr('height', (d) => countryYScale(100 - (d.value * 100 / sumOfPollution)))
         .attr('width', countryXScale.bandwidth())
-        .attr('y', (d) => countryHeight - countryYScale(maxValue - d.value))
-        .attr('x', (d) => countryXScale(d.country));
+        .attr('y', (d) => countryHeight - countryYScale(100 - (d.value * 100 / sumOfPollution)))
+        .attr('x', (d) => countryXScale(d.pollutant));
 
-    rect.merge(rectEnter).select('title').text((d) => d.country);
+    rect.merge(rectEnter).select('title').text((d) => formatPercent(d.value / sumOfPollution));
 
     // EXIT
     // elements that aren't associated with data
@@ -295,7 +305,7 @@ function updateTotal(newData) {
     totalGYAxis.call(totalYAxis);
 
     // Render the chart with new data
-    // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
+    // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
     const rect = totalG.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
@@ -339,11 +349,16 @@ function fillSelectors(data){
 
 function initChangeHandlers() {
     d3.select('#selected-country').on("change", function(){
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
     });
 
     d3.select('#selected-pollutant').on("change", function(){
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+    });
+
+    d3.select('#sub-country-chart').selectAll('rect').on("click", function(r){
+        d3.select('#selected-pollutant').property("value",r.pollutant);
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
     });
 }
 
@@ -359,6 +374,5 @@ setupTotalChart();
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
     fillSelectors(data);
-    updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'));
-    initChangeHandlers();
+    updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
 });
