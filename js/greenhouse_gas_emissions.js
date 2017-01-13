@@ -1,3 +1,12 @@
+Array.prototype.groupBy = function(prop) {
+    return this.reduce(function(groups, item) {
+        var val = item[prop];
+        groups[val] = groups[val] || [];
+        groups[val].push(item);
+        return groups;
+    }, {});
+}
+
 function setupMainChart() {
     var mainMargin = {top: 10, bottom: 110, left: 50, right: 20};
     var mainWidth = 800 - mainMargin.left - mainMargin.right;
@@ -81,11 +90,26 @@ var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis,
 var data;
 
 function updateAll(data) {
-    main_data = data.filter((d) => d.year === 1990 && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+    self.data = data;
+    var main_all = data.filter((d) => d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL')
+                       .map(function(e) { return {
+                           year: e.year,
+                           value: e.value};
+                       });
 
-    updateMain(main_data);
-    updateTotal(main_data);
-    updateCountry(main_data);
+    var main_grouped = Enumerable.From(main_all).GroupBy("$.year", null,
+        function (key, g) {
+            var result = {
+                year: key,
+                avg: g.Sum("$.value") / g.source.length
+            };
+            return result;
+        }).ToArray();
+
+    main_selected = data.filter((d) => d.country === 'Austria' && d.pollutant === 'Greenhouse gases' && d.variable === 'TOTAL');
+    updateMain(main_grouped, main_selected);
+    updateTotal(main_all);
+    updateCountry(main_all);
 }
 
 var lineGen = d3.line()
@@ -96,11 +120,11 @@ var lineGen = d3.line()
         return mainYScale(d.value);
     });
 
-function updateMain(new_data) {
+function updateMain(all_data, selected_data) {
     //update the scales
-    mainXScale.domain(new_data.map((d) => d.country));
+    mainXScale.domain(all_data.map((d) => d.country));
 
-    var max_value = d3.max(new_data, (d) => d.value)
+    var max_value = d3.max(all_data, (d) => d.value)
 
     mainYScale.domain([max_value, 0]);
     //render the axis
@@ -113,7 +137,7 @@ function updateMain(new_data) {
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensurign that the same DOM element is bound to the same data-item
-    const path = mainG.selectAll('path.line').data(new_data, (d) => d.country);
+    const path = mainG.selectAll('path.line').data(all_data, (d) => d.country);
 
     // ENTER
     // new elements
@@ -124,8 +148,8 @@ function updateMain(new_data) {
 
     // ENTER + UPDATE
     // both old and new elements
-    path.merge(path_enter).transition()
-        .attr('d', (d) => {console.debug(lineGen(d)); lineGen(d)});
+    path.merge(path_enter).transition();
+        // .attr('d', (d) => wtf(d));
 
     // EXIT
     // elements that aren't associated with data
