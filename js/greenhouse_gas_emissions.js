@@ -8,15 +8,15 @@ Array.prototype.groupBy = function(prop) {
 }
 
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 110, left: 150, right: 20};
+    var mainMargin = {top: 10, bottom: 90, left: 150, right: 20};
     var mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
     // Creates sources <svg> element
-    mainG = d3.select('#main-chart').append('svg')
+    var mainSvg = d3.select('#main-chart').append('svg')
         .attr('width', mainWidth + mainMargin.left + mainMargin.right)
-        .attr('height', mainHeight + mainMargin.top + mainMargin.bottom)
-        .append('g')
+        .attr('height', mainHeight + mainMargin.top + mainMargin.bottom);
+    mainG = mainSvg.append('g')
         .attr('transform', `translate(${mainMargin.left},${mainMargin.top})`);
 
     // Scales setup
@@ -29,6 +29,72 @@ function setupMainChart() {
 
     mainYAxis = d3.axisLeft().scale(mainYScale);
     mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
+
+    mainSvg.append("path") // this is the black vertical line to follow mouse
+        .attr("class","mouseLine")
+        .style("stroke","black")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+
+
+    var bisect = d3.bisector(function(d) { return d.Year; }).right; // reusable bisect to find points before/after line
+
+    mainG.append('svg:rect') // append a rect to catch mouse movements on canvas
+        .attr('class', 'overlay')
+        .attr('width', mainWidth) // can't catch mouse events on a g element
+        .attr('height', mainHeight)
+        .attr('fill', 'none')
+        .attr('pointer-events', 'all')
+        .on('mouseout', function(){ // on mouse out hide line, circles and text
+            d3.select(".mouseLine")
+                .style("opacity", "0");
+            d3.selectAll(".mouseCircle circle")
+                .style("opacity", "0");
+            d3.selectAll(".mouseCircle text")
+                .style("opacity", "0");
+        })
+        .on('mouseover', function(){ // on mouse in show line, circles and text
+            d3.select(".mouseLine")
+                .style("opacity", "1");
+            d3.selectAll(".mouseCircle circle")
+                .style("opacity", "1");
+            d3.selectAll(".mouseCircle text")
+                .style("opacity", "1");
+        })
+        .on('mousemove', function() { // mouse moving over canvas
+            d3.select(".mouseLine")
+                .attr("d", function(){
+                    yRange = mainYScale.range(); // range of y axis
+                    var xCoor = d3.mouse(this)[0]; // mouse position in x
+                    var xDate = mainXScale.invert(xCoor); // date corresponding to mouse x
+                    d3.selectAll('.mouseCircle') // for each circle group
+                        .each(function(d,i){
+                            var rightIdx = bisect(data[1].values, xDate); // find date in data that right off mouse
+                            /*
+                             var interSect = get_line_intersection(xCoor,  // get the intersection of our vertical line and the data line
+                             yRange[0],
+                             xCoor,
+                             yRange[1],
+                             x(data[i].values[rightIdx-1].YEAR),
+                             y(data[i].values[rightIdx-1].VALUE),
+                             x(data[i].values[rightIdx].YEAR),
+                             y(data[i].values[rightIdx].VALUE));
+                             */
+
+                            yVal = data[i].values[rightIdx-1].VALUE;
+                            yCoor = y(yVal);
+
+                            d3.select(this) // move the circle to intersection
+                                .attr('transform', 'translate(' + xCoor + ',' + yCoor + ')');
+
+                            d3.select(this.children[0]) // write coordinates out
+                                .text((xDate.getFullYear()) + " , " + yVal);
+
+                        });
+
+                    return "M"+ xCoor +"," + yRange[0] + "L" + xCoor + "," + yRange[1]; // position vertical line
+                });
+        });
 }
 
 function setupCountryChart() {

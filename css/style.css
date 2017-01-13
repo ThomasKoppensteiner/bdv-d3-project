@@ -31,3 +31,14 @@ rect:hover {
 #main-chart p {
     margin: 5px 10px;
 }
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+    margin-left: 120px;
+}
+
+.focus circle {
+    fill: none;
+    stroke: steelblue;
+}
