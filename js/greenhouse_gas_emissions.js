@@ -113,8 +113,8 @@ function createOverlay(){
         .on('click', function() {
             var xYear = mainXScale.invert(d3.mouse(this)[0]).toFixed();
             var country = getSelectorValue('#selected-country');
-            // TODO - call update method for smaller charts
-            console.debug(country + '-' + xYear);
+            d3.select('#selected-year').property("value",xYear);
+            updateSubCharts(data);
         });
 }
 
@@ -190,14 +190,17 @@ function setupTotalChart() {
     totalGYAxis = totalG.append('g').attr('class', 'y axis');
 }
 
-
-var TEMP_YEAR=1990;
-
 var p = Math.max(0, d3.precisionFixed(0.001) - 2),
     formatPercent = d3.format("." + p + "%");
 
-function updateAll(data, selCountry, selPollutant, selYear) {
+
+
+function updateAll(data) {
     self.data = data;
+
+    var selCountry = getSelectorValue('#selected-country');
+    var selPollutant = getSelectorValue('#selected-pollutant');
+
     var mainAll = data.filter((d) => d.pollutant === selPollutant && d.variable === 'TOTAL')
                        .map(function(e) { return {
                            year: e.year,
@@ -217,6 +220,14 @@ function updateAll(data, selCountry, selPollutant, selYear) {
     var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL');
 
     updateMain(mainGrouped, mainSelected);
+
+    updateSubCharts(data);
+}
+
+function updateSubCharts(data) {
+    var selCountry = getSelectorValue('#selected-country');
+    var selPollutant = getSelectorValue('#selected-pollutant');
+    var selYear = parseInt(getSelectorValue('#selected-year'));
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
@@ -388,21 +399,21 @@ function fillSelectors(data){
 
 function initChangeHandlers() {
     d3.select('#selected-country').on("change", function(){
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+        updateAll(data);
     });
 
     d3.select('#selected-pollutant').on("change", function(){
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+        updateAll(data);
     });
 
     d3.select('#sub-country-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+        updateAll(data);
     });
 
     d3.select('#sub-total-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
-        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+        updateAll(data);
     });
 }
 
@@ -418,5 +429,5 @@ setupTotalChart();
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
     fillSelectors(data);
-    updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+    updateAll(data);
 });
