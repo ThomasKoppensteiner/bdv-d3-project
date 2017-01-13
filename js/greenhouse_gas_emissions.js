@@ -122,9 +122,9 @@ function setupCountryChart() {
 }
 
 function setupTotalChart() {
-    var totalMargin = {top: 10, bottom: 100, left: 120, right: 20};
+    var totalMargin = {top: 10, bottom: 150, left: 120, right: 20};
     var totalWidth = 450 - totalMargin.left - totalMargin.right;
-    totalHeight = 300 - totalMargin.top - totalMargin.bottom;
+    totalHeight = 350 - totalMargin.top - totalMargin.bottom;
 
     // Creates sources <svg> element
     totalG = d3.select('#sub-total-chart').append('svg')
@@ -183,11 +183,19 @@ function updateAll(data, selCountry, selPollutant, selYear) {
 
     updateMain(mainGrouped, mainSelected);
 
-    var countryPollutionData = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
-    updateCountry(countryPollutionData);
+    var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
+    updateCountry(countryPollutions);
 
-    
-    updateTotal(mainAll);
+    var totalPollutions = data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
+    var totalPollutionsGrouped = Enumerable.From(totalPollutions).GroupBy("$.pollutant", null,
+        function(key, g) {
+            var result = {
+                pollutant: key,
+                value: g.Sum("$.value")
+            }
+            return result;
+        }).ToArray();
+    updateTotal(totalPollutionsGrouped);
 
     initChangeHandlers();
 }
@@ -247,21 +255,29 @@ function updateMain(allData, selectedData) {
     selectedPath.exit().remove();
 }
 
-function updateCountry(newData) {
+function updateCountry(newData) { 
+    updatePollutionPercentChart(countryG, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryHeight, newData);
+}
+
+function updateTotal(newData) { 
+    updatePollutionPercentChart(totalG, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalHeight, newData);
+}
+
+function updatePollutionPercentChart(svgGroup, xScale, yScale, gXAxis, gYAxis, xAxis, yAxis, chartHeight, newData){
     //update the scales
-    countryXScale.domain(newData.map((d) => d.pollutant));
-    countryYScale.domain([100.0, 0]);
+    xScale.domain(newData.map((d) => d.pollutant));
+    yScale.domain([100.0, 0]);
+
     //render the axis
-    countryGXAxis.call(countryXAxis).selectAll("text").style("text-anchor", "end")
+    gXAxis.call(xAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .attr("transform", "rotate(-65)");
-    ;
-    countryGYAxis.call(countryYAxis);
+    gYAxis.call(yAxis);
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
-    const rect = countryG.selectAll('rect').data(newData, (d) => d.country);
+    const rect = svgGroup.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
     // new elements
@@ -277,55 +293,12 @@ function updateCountry(newData) {
     // ENTER + UPDATE
     // both old and new elements
     rect.merge(rectEnter).transition()
-        .attr('height', (d) => countryYScale(100 - (d.value * 100 / sumOfPollution)))
-        .attr('width', countryXScale.bandwidth())
-        .attr('y', (d) => countryHeight - countryYScale(100 - (d.value * 100 / sumOfPollution)))
-        .attr('x', (d) => countryXScale(d.pollutant));
+        .attr('height', (d) => yScale(100 - (d.value * 100 / sumOfPollution)))
+        .attr('width', xScale.bandwidth())
+        .attr('y', (d) => chartHeight - yScale(100 - (d.value * 100 / sumOfPollution)))
+        .attr('x', (d) => xScale(d.pollutant));
 
     rect.merge(rectEnter).select('title').text((d) => formatPercent(d.value / sumOfPollution));
-
-    // EXIT
-    // elements that aren't associated with data
-    rect.exit().remove();
-}
-
-function updateTotal(newData) {
-    //update the scales
-    totalXScale.domain(newData.map((d) => d.country));
-
-    var maxValue = d3.max(newData, (d) => d.value)
-
-    totalYScale.domain([maxValue, 0]);
-    //render the axis
-    totalGXAxis.call(totalXAxis).selectAll("text").style("text-anchor", "end")
-        .attr("dx", "-.8em")
-        .attr("dy", ".15em")
-        .attr("transform", "rotate(-65)");
-    ;
-    totalGYAxis.call(totalYAxis);
-
-    // Render the chart with new data
-    // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
-    const rect = totalG.selectAll('rect').data(newData, (d) => d.country);
-
-    // ENTER
-    // new elements
-    const rectEnter = rect.enter().append('rect')
-        .attr('x', 0) //set intelligent default values for animation
-        .attr('y', 0)
-        .attr('width', 0)
-        .attr('height', 0);
-    rectEnter.append('title');
-
-    // ENTER + UPDATE
-    // both old and new elements
-    rect.merge(rectEnter).transition()
-        .attr('height', (d) => totalYScale(maxValue - d.value))
-        .attr('width', totalXScale.bandwidth())
-        .attr('y', (d) => totalHeight - totalYScale(maxValue - d.value))
-        .attr('x', (d) => totalXScale(d.country));
-
-    rect.merge(rectEnter).select('title').text((d) => d.country);
 
     // EXIT
     // elements that aren't associated with data
@@ -357,6 +330,11 @@ function initChangeHandlers() {
     });
 
     d3.select('#sub-country-chart').selectAll('rect').on("click", function(r){
+        d3.select('#selected-pollutant').property("value",r.pollutant);
+        updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
+    });
+
+    d3.select('#sub-total-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
         updateAll(data, getSelectorValue('#selected-country'), getSelectorValue('#selected-pollutant'), TEMP_YEAR);
     });
