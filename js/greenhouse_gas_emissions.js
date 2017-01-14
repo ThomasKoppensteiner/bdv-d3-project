@@ -280,8 +280,8 @@ function updateSubCharts(data) {
     var selPollutant = getSelectorValue('#selected-pollutant');
     var selYear = parseInt(getSelectorValue('#selected-year'));
 
-    countryChartSetup.chartTitle.text(selCountry+"s emmissions per pollutat, "+selYear);
-    totalPollutionChartSetup.chartTitle.text("Total emmissions per pollutat, "+selYear);
+    countryChartSetup.chartTitle.text(selCountry+"s emissions per pollutat, "+selYear);
+    totalPollutionChartSetup.chartTitle.text("Total emissions per pollutat, "+selYear);
     totalCountryChartSetup.chartTitle.text("Total greenhouse gas emissions per country, "+selYear);        
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
