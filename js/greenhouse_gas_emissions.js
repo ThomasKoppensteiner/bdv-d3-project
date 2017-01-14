@@ -3,9 +3,9 @@ var perHead = false;
 // Global vars for main chart, needed in other functions
 var mainMargin, mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
 // Global vars for country chart, needed in other functions
-var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG, countryTitle;
+var countryChartSetup;
 // Global vars for total chart, needed in other functions
-var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG, totalTitle;
+var totalChartSetup;
 
 function setupMainChart() {
     mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
@@ -165,31 +165,11 @@ function createMouseCircles(){
 }
 
 function setupCountryChart(){
-    var setup = setupPercentChart("#sub-country-chart", "Pollutants");
-
-    countryHeight = setup.chartHeight;
-    countryG      = setup.svgGroup;
-    countryXScale = setup.xScale;
-    countryYScale = setup.yScale;
-    countryXAxis  = setup.xAxis;
-    countryYAxis  = setup.yAxis;
-    countryGXAxis = setup.gXAxis;
-    countryGYAxis = setup.gYAxis;
-    countryTitle  = setup.chartTitle;
+    countryChartSetup = setupPercentChart("#sub-country-chart", "Pollutants");
 }
 
 function setupTotalChart(){
-    var setup = setupPercentChart("#sub-total-chart", "Pollutants");
-
-    totalHeight = setup.chartHeight;
-    totalG      = setup.svgGroup;
-    totalXScale = setup.xScale;
-    totalYScale = setup.yScale;
-    totalXAxis  = setup.xAxis;
-    totalYAxis  = setup.yAxis;
-    totalGXAxis = setup.gXAxis;
-    totalGYAxis = setup.gYAxis;
-    totalTitle  = setup.chartTitle;
+    totalChartSetup = setupPercentChart("#sub-total-chart", "Pollutants");
 }
 
 function setupPercentChart(selector, xAxisText){
@@ -294,8 +274,8 @@ function updateSubCharts(data) {
     var selPollutant = getSelectorValue('#selected-pollutant');
     var selYear = parseInt(getSelectorValue('#selected-year'));
 
-    countryTitle.text(selCountry+", "+selYear);
-    totalTitle.text("Total, "+selYear);
+    countryChartSetup.chartTitle.text(selCountry+", "+selYear);
+    totalChartSetup.chartTitle.text("Total, "+selYear);
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
@@ -388,28 +368,28 @@ function updateMain(allData, selectedData) {
 }
 
 function updateCountry(newData) {
-    updatePollutionPercentChart(countryG, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryHeight, newData);
+    updatePollutionPercentChart(countryChartSetup, newData);
 }
 
 function updateTotal(newData) {
-    updatePollutionPercentChart(totalG, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalHeight, newData);
+    updatePollutionPercentChart(totalChartSetup, newData);
 }
 
-function updatePollutionPercentChart(svgGroup, xScale, yScale, gXAxis, gYAxis, xAxis, yAxis, chartHeight, newData){
+function updatePollutionPercentChart(chartSetup, newData){
     //update the scales
-    xScale.domain(newData.map((d) => d.pollutant));
-    yScale.domain([100.0, 0]);
+    chartSetup.xScale.domain(newData.map((d) => d.pollutant));
+    chartSetup.yScale.domain([100.0, 0]);
 
     //render the axis
-    gXAxis.call(xAxis).selectAll("text").style("text-anchor", "end")
+    chartSetup.gXAxis.call(chartSetup.xAxis).selectAll("text").style("text-anchor", "end")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .attr("transform", "rotate(-65)");
-    gYAxis.call(yAxis);
+    chartSetup.gYAxis.call(chartSetup.yAxis);
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
-    const rect = svgGroup.selectAll('rect').data(newData, (d) => d.country);
+    const rect = chartSetup.svgGroup.selectAll('rect').data(newData, (d) => d.country);
 
     // ENTER
     // new elements
@@ -425,10 +405,10 @@ function updatePollutionPercentChart(svgGroup, xScale, yScale, gXAxis, gYAxis, x
     // ENTER + UPDATE
     // both old and new elements
     rect.merge(rectEnter).transition()
-        .attr('height', (d) => yScale(100 - (d.value * 100 / sumOfPollution)))
-        .attr('width', xScale.bandwidth())
-        .attr('y', (d) => chartHeight - yScale(100 - (d.value * 100 / sumOfPollution)))
-        .attr('x', (d) => xScale(d.pollutant));
+        .attr('height', (d) => chartSetup.yScale(100 - (d.value * 100 / sumOfPollution)))
+        .attr('width', chartSetup.xScale.bandwidth())
+        .attr('y', (d) => chartSetup.chartHeight - chartSetup.yScale(100 - (d.value * 100 / sumOfPollution)))
+        .attr('x', (d) => chartSetup.xScale(d.pollutant));
 
     rect.merge(rectEnter).select('title').text((d) => formatPercent(d.value / sumOfPollution));
 
