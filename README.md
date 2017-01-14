@@ -35,7 +35,7 @@ The "Country emissions per pollutant" chart shows the composition of the polluta
 The "Total emissions per pollutant" chart shows the composition of the pollutants (greenhouse gases) for all countries in the dataset (global) and the selected year in percent. By clicking either the bar or the pollutantname (label) the selected pollutant changes and the other charts get updated. The selected pollutant is highlighted in red.
 
 ### Total greenhouse gas emissions per country chart
-The "Total greenhouse gas emissions per country" chart shows the portion of the countrys total greenhouse gas emission in percent of the total emission for the selected year. By clicking either the bar or the country (label) the selected country changes and the other charts get updated. The selected country is highlighted in red.
+The "Total greenhouse gas emissions per country" chart shows the portion of the countrys total greenhouse gas (selected pollutant) emission in percent of the total emission for the selected year. By clicking either the bar or the country (label) the selected country changes and the other charts get updated. The selected country is highlighted in red.
 
 ## Findings
 In the year 2005, for example, Austria had a 0.4% share on the emitted greenhouse gases from all countries in the dataset.
@@ -44,6 +44,8 @@ Austrias pollutant mix included 85.8% Carbon dioxide whereas in the global mix i
 Brazil emitted 3.6% of the greenhouse gases in the same year. Its pollutant mix included 43.9% Carbon dioxide.
 
 Compared by "per-head" Austria emitted 4.5% of the greenhouse gases with about 9.7 t of CO2 equivalents and Brazil emitted 1.8% with about 2.0 t of CO2 equivalents.
+
+Another finding is, that "per-head" New Zealand was over 25 years (1990 to 2014) the greates emitter of Methan. Followed by Australia and Russia.
 
 ## Development
 

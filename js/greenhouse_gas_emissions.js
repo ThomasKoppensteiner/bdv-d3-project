@@ -282,7 +282,7 @@ function updateSubCharts(data) {
 
     countryChartSetup.chartTitle.text(selCountry+"s emissions per pollutat, "+selYear);
     totalPollutionChartSetup.chartTitle.text("Total emissions per pollutat, "+selYear);
-    totalCountryChartSetup.chartTitle.text("Total greenhouse gas emissions per country, "+selYear);        
+    totalCountryChartSetup.chartTitle.text("Total " + selPollutant + " emissions per country, "+selYear);        
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
@@ -298,7 +298,7 @@ function updateSubCharts(data) {
         }).ToArray();
     updateTotalPollutant(totalPollutionsGrouped);
 
-    var totalCountries= data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant == 'Greenhouse gases' );
+    var totalCountries= data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant === selPollutant );
     var totalCountriesGrouped = Enumerable.From(totalCountries).GroupBy("$.country", null,
         function(key, g) {
             var population = gPop.filter(p => p.Country===key)[0];
