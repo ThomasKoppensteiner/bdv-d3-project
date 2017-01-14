@@ -1,12 +1,14 @@
+var perHead = false;
+
 // Global vars for main chart, needed in other functions
-var mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
+var mainMargin, mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
 // Global vars for country chart, needed in other functions
 var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG, countryTitle;
 // Global vars for total chart, needed in other functions
 var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG, totalTitle;
 
 function setupMainChart() {
-    var mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
+    mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
     mainWidth = 800 - mainMargin.left - mainMargin.right;
     mainHeight = 600 - mainMargin.top - mainMargin.bottom;
 
@@ -37,16 +39,6 @@ function setupMainChart() {
         .style("text-anchor", "middle")
         .text("Year");
 
-    // text label for the y axis
-    mainG.append("text")
-        .attr("class", "axis-label main")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 10 - mainMargin.left)
-        .attr("x",0 - (mainHeight / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("Tonnes of CO2 equivalent, Thousands");
-
     createOverlay();
 }
 
@@ -65,7 +57,7 @@ function createOverlay(){
     // rect to catch mouse movements on canvas
     mouseG.append('svg:rect')
         .attr('class', 'overlay')
-        .attr('width', mainWidth - 25)
+        .attr('width', mainWidth - mainMargin.right)
         .attr('height', mainHeight)
         .attr('fill', 'none')
         .attr('pointer-events', 'all')
@@ -80,10 +72,18 @@ function createOverlay(){
         .on('mouseover', function(){ // on mouse in show line, circles and text
             d3.select(".mouse-line")
                 .style("opacity", "1");
-            d3.selectAll(".mouse-circle circle")
-                .style("opacity", "1");
-            d3.selectAll(".mouse-circle text")
-                .style("opacity", "1");
+            if(!perHead){
+                d3.selectAll(".mouse-circle circle")
+                    .style("opacity", "1");
+                d3.selectAll(".mouse-circle text")
+                    .style("opacity", "1");
+            }
+            else {
+                d3.selectAll(".mouse-circle:not(.mouse-circle-mean) circle")
+                    .style("opacity", "1");
+                d3.selectAll(".mouse-circle:not(.mouse-circle-mean) text")
+                    .style("opacity", "1");
+            }
         })
         .on('mousemove', function() { // mouse moving over canvas
             var mouse = d3.mouse(this);
@@ -104,27 +104,31 @@ function createOverlay(){
                             bisect = d3.bisector(function(d) { return d.year; }).right;
 
                         var line = document.getElementsByClassName(c)[0];
-                        var beginning = 0,
-                            end = line.getTotalLength(),
-                            target = null;
+                        if(line != null){
 
-                        while (true){
-                            target = Math.floor((beginning + end) / 2);
-                            pos = line.getPointAtLength(target);
-                            if ((target === end || target === beginning) && pos.x !== mouse[0]) {
-                                break;
+                            var beginning = 0,
+                                end = line.getTotalLength(),
+                                target = null;
+
+                            while (true){
+                                target = Math.floor((beginning + end) / 2);
+                                pos = line.getPointAtLength(target);
+                                if ((target === end || target === beginning) && pos.x !== mouse[0]) {
+                                    break;
+                                }
+                                if (pos.x > mouse[0])      end = target;
+                                else if (pos.x < mouse[0]) beginning = target;
+                                else break;
                             }
-                            if (pos.x > mouse[0])      end = target;
-                            else if (pos.x < mouse[0]) beginning = target;
-                            else break;
+
+                            d3.select(this).select('text')
+                                .text(mainYScale.invert(pos.y).toFixed(perHead ? 4 : 0));
+
+                            return "translate(" + mouse[0] + "," + pos.y +")";
                         }
-
-                        d3.select(this).select('text')
-                            .text(mainYScale.invert(pos.y).toFixed());
-
-                        return "translate(" + mouse[0] + "," + pos.y +")";
                     });
             };
+
 
             selectText(".mouse-circle-mean", "mean");
             selectText(".mouse-circle-median", "median");
@@ -152,7 +156,10 @@ function createMouseCircles(){
             .attr("transform", "translate(10,3)");
     };
 
-    createCircle("mouse-circle-mean", "green");
+    if(!perHead){
+        createCircle("mouse-circle-mean", "green");
+    }
+
     createCircle("mouse-circle-median", "blue");
     createCircle("mouse-circle-selected", "red");
 }
@@ -252,6 +259,10 @@ function updateAll(data) {
 
     var selCountry = getSelectorValue('#selected-country');
     var selPollutant = getSelectorValue('#selected-pollutant');
+    var selYear = parseInt(getSelectorValue('#selected-year'));
+
+    var popSelected = gPop.filter(e => e.Country===selCountry)[0];
+    var popGlobal = gPop.filter(e => e.Country==='Total')[0];
 
     var mainAll = data.filter((d) => d.pollutant === selPollutant && d.variable === 'TOTAL')
                        .map(function(e) { return {
@@ -265,11 +276,18 @@ function updateAll(data) {
                 year: key,
                 median: d3.median(g.source, v => v.value),
                 mean: d3.mean(g.source, v => v.value),
+                phead: d3.sum(g.source, v => v.value * 1000) / popGlobal[key]
             };
             return result;
         }).ToArray();
 
-    var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL');
+    var mainSelected = data.filter((d) => d.country === selCountry && d.pollutant === selPollutant && d.variable === 'TOTAL').map(function(r) {
+        return {
+            year: r.year,
+            value: r.value,
+            phead: 1000 * r.value / popSelected[r.year]
+        };
+    });
 
     updateMain(mainGrouped, mainSelected);
 
@@ -312,8 +330,8 @@ var lineGen = d3.line()
 
 function updateMain(allData, selectedData) {
     //update the scales
-    var maxAllValue = d3.max(allData, (d) => d.mean);
-    var maxSelectedValue = d3.max(selectedData, (d) => d.value);
+    var maxAllValue = d3.max(allData, (d) => !perHead ? d.mean : d.phead);
+    var maxSelectedValue = d3.max(selectedData, (d) => !perHead ? d.value : d.phead);
 
     mainYScale.domain([Math.max(maxAllValue, maxSelectedValue), 0]);
     //render the axis
@@ -334,30 +352,51 @@ function updateMain(allData, selectedData) {
 
         path.merge(pathEnter).transition().attr('d', (d) => lineGen(d));
         path.exit().remove();
-
     };
 
-    const totalMeanData = allData.map(function(e) { return {
-        year: e.year,
-        value: e.mean};
-    });
+    var remove = function(c) {
+        mainG.selectAll('.'+c).remove();
+    }
 
-    const totalMedianData = allData.map(function(e) { return {
-        year: e.year,
-        value: e.median};
-    });
+    if(!perHead){
+        var totalMeanData = allData.map(function(e) { return {
+            year: e.year,
+            value: e.mean };
+        });
 
-    enterUpdateMerge('mean', totalMeanData, 'green');
-    enterUpdateMerge('median', totalMedianData, 'blue');
+        const totalMedianData = allData.map(function(e) { return {
+            year: e.year,
+            value: e.median };
+        });
+
+        enterUpdateMerge('mean', totalMeanData, 'green');
+        enterUpdateMerge('median', totalMedianData, 'blue');
+    }
+    else {
+        const totalPerHeadData = allData.map(function(e) { return {
+            year: e.year,
+            value: e.phead };
+        });
+
+        selectedData = selectedData.map(function(e) { return {
+           year: e.year,
+           value: e.phead };
+        });
+
+        remove('mean');
+        enterUpdateMerge('median', totalPerHeadData, 'blue');
+    }
+
     enterUpdateMerge('selected', selectedData, 'red');
+
     updateLegend();
 }
 
-function updateCountry(newData) { 
+function updateCountry(newData) {
     updatePollutionPercentChart(countryG, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryHeight, newData);
 }
 
-function updateTotal(newData) { 
+function updateTotal(newData) {
     updatePollutionPercentChart(totalG, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalHeight, newData);
 }
 
@@ -404,10 +443,18 @@ function updatePollutionPercentChart(svgGroup, xScale, yScale, gXAxis, gYAxis, x
 }
 
 function updateLegend(){
-    const legendItems = [
-        { title: 'Global mean', color: "green" },
-        { title: 'Global median', color: "blue" },
-        { title: getSelectorValue('#selected-country'), color: "red" }];
+    var legendItems;
+    if(!perHead) {
+        legendItems = [
+            { title: 'Global mean', color: "green" },
+            { title: 'Global median', color: "blue" },
+            { title: getSelectorValue('#selected-country'), color: "red" }];
+    }
+    else {
+        legendItems = [
+            { title: 'Global', color: "blue" },
+            { title: getSelectorValue('#selected-country'), color: "red" }];
+    }
 
     const legendRect = mainG.selectAll('.legendRect').data(legendItems);
     const legendRectEnter = legendRect.enter().append('rect').attr('class', 'legendRect');
@@ -434,6 +481,17 @@ function updateLegend(){
         });
     legendRect.exit().remove();
     legendText.exit().remove();
+
+    // y axis label
+    mainG.selectAll(".y-axis-label").remove();
+    mainG.append("text")
+        .attr("class", "axis-label main y-axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 10 - mainMargin.left)
+        .attr("x",0 - (mainHeight / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .text(perHead ? "Tonnes of CO2 equivalent" : "Tonnes of CO2 equivalent, Thousands");
 }
 
 function fillSelector(data, id, valueSelector){
@@ -460,6 +518,11 @@ function initChangeHandlers() {
         updateAll(data);
     });
 
+    d3.select('#selected-per-head').on('change', function() {
+        perHead = d3.select(this).property('checked');
+        updateAll(data);
+    });
+
     d3.select('#sub-country-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
         updateAll(data);
@@ -480,8 +543,14 @@ setupMainChart();
 setupCountryChart();
 setupTotalChart();
 
+
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
-    fillSelectors(data);
-    updateAll(data);
+    d3.json('data/population_per_year.json', (popError, popData) => {
+        if(popError) throw popError;
+        gPop = popData;
+
+        fillSelectors(data);
+        updateAll(data);
+    });
 });
