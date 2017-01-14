@@ -3,9 +3,9 @@ var perHead = false;
 // Global vars for main chart, needed in other functions
 var mainMargin, mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
 // Global vars for country chart, needed in other functions
-var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG;
+var countryHeight, countryXScale, countryYScale, countryGXAxis, countryGYAxis, countryXAxis, countryYAxis, countryG, countryTitle;
 // Global vars for total chart, needed in other functions
-var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG;
+var totalHeight, totalXScale, totalYScale, totalGXAxis, totalGYAxis, totalXAxis, totalYAxis, totalG, totalTitle;
 
 function setupMainChart() {
     mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
@@ -164,58 +164,90 @@ function createMouseCircles(){
     createCircle("mouse-circle-selected", "red");
 }
 
-function setupCountryChart() {
-    var countryMargin = {top: 10, bottom: 150, left: 120, right: 20};
-    var countryWidth = 450 - countryMargin.left - countryMargin.right;
-    countryHeight = 350 - countryMargin.top - countryMargin.bottom;
+function setupCountryChart(){
+    var setup = setupPercentChart("#sub-country-chart", "Pollutants");
 
-    // Creates sources <svg> element
-    countryG = d3.select('#sub-country-chart').append('svg')
-        .attr('width', countryWidth + countryMargin.left + countryMargin.right)
-        .attr('height', countryHeight + countryMargin.top + countryMargin.bottom)
-        .append('g')
-        .attr('transform', `translate(${countryMargin.left},${countryMargin.top})`);
-
-    // Scales setup
-    countryXScale = d3.scaleBand().rangeRound([0, countryWidth]).paddingInner(0.1);
-    countryYScale = d3.scaleLinear().range([0, countryHeight]);
-
-    // Axis setup
-    countryXAxis = d3.axisBottom().scale(countryXScale);
-    countryGXAxis = countryG.append('g').attr("transform", `translate(0,${countryHeight})`).attr('class', 'x axis');
-
-    countryYAxis = d3.axisLeft().scale(countryYScale).tickFormat(function(d){return d+ "%"});
-    countryGYAxis = countryG.append('g').attr('class', 'y axis');
+    countryHeight = setup.chartHeight;
+    countryG      = setup.svgGroup;
+    countryXScale = setup.xScale;
+    countryYScale = setup.yScale;
+    countryXAxis  = setup.xAxis;
+    countryYAxis  = setup.yAxis;
+    countryGXAxis = setup.gXAxis;
+    countryGYAxis = setup.gYAxis;
+    countryTitle  = setup.chartTitle;
 }
 
-function setupTotalChart() {
-    var totalMargin = {top: 10, bottom: 150, left: 120, right: 20};
-    var totalWidth = 450 - totalMargin.left - totalMargin.right;
-    totalHeight = 350 - totalMargin.top - totalMargin.bottom;
+function setupTotalChart(){
+    var setup = setupPercentChart("#sub-total-chart", "Pollutants");
+
+    totalHeight = setup.chartHeight;
+    totalG      = setup.svgGroup;
+    totalXScale = setup.xScale;
+    totalYScale = setup.yScale;
+    totalXAxis  = setup.xAxis;
+    totalYAxis  = setup.yAxis;
+    totalGXAxis = setup.gXAxis;
+    totalGYAxis = setup.gYAxis;
+    totalTitle  = setup.chartTitle;
+}
+
+function setupPercentChart(selector, xAxisText){
+    var margin = {top: 60, bottom: 150, left: 120, right: 20};
+    var width = 450 - margin.left - margin.right;
+    var chartHeight = 400 - margin.top - margin.bottom;
 
     // Creates sources <svg> element
-    totalG = d3.select('#sub-total-chart').append('svg')
-        .attr('width', totalWidth + totalMargin.left + totalMargin.right)
-        .attr('height', totalHeight + totalMargin.top + totalMargin.bottom)
-        .append('g')
-        .attr('transform', `translate(${totalMargin.left},${totalMargin.top})`);
+    var svg = d3.select(selector).append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', chartHeight + margin.top + margin.bottom);
+
+    var svgGroup = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Scales setup
-    totalXScale = d3.scaleBand().rangeRound([0, totalWidth]).paddingInner(0.1);
-    totalYScale = d3.scaleLinear().range([0, totalHeight]);
+    var xScale = d3.scaleBand().rangeRound([0, width]).paddingInner(0.1);
+    var yScale = d3.scaleLinear().range([0, chartHeight]);
 
     // Axis setup
-    totalXAxis = d3.axisBottom().scale(totalXScale);
-    totalGXAxis = totalG.append('g').attr("transform", `translate(0,${totalHeight})`).attr('class', 'x axis');
+    var xAxis = d3.axisBottom().scale(xScale);
+    var gXAxis = svgGroup.append('g').attr("transform", `translate(0,${chartHeight})`).attr('class', 'x axis');
 
-    totalYAxis = d3.axisLeft().scale(totalYScale).tickFormat(function(d){return d+ "%"});
-    totalGYAxis = totalG.append('g').attr('class', 'y axis');
+    var yAxis = d3.axisLeft().scale(yScale).tickFormat(function(d) { return d+ "%" });
+    var gYAxis = svgGroup.append('g').attr('class', 'y axis');
+
+    // Title
+    chartTitle = svgGroup.append("text")
+        .attr("class", "title-label sub-chart")
+        .attr("transform",
+            "translate(" + (width/2) + " ," +
+            (0 - 20) + ")")
+        .style("text-anchor", "middle");
+
+    // text label for the x axis
+    svgGroup.append("text")
+        .attr("class", "axis-label sub-chart")
+        .attr("transform",
+            "translate(" + (width/2) + " ," +
+            (chartHeight +  margin.bottom - 20) + ")")
+        .style("text-anchor", "middle")
+        .text(xAxisText);
+
+    return {
+        chartHeight: chartHeight,
+        svgGroup:    svgGroup,
+        xScale:      xScale,
+        yScale:      yScale,
+        xAxis:       xAxis,
+        yAxis:       yAxis,
+        gXAxis:      gXAxis,
+        gYAxis:      gYAxis,
+        chartTitle:  chartTitle
+    };
 }
 
 var p = Math.max(0, d3.precisionFixed(0.001) - 2),
     formatPercent = d3.format("." + p + "%");
-
-
 
 function updateAll(data) {
     self.data = data;
@@ -261,6 +293,9 @@ function updateSubCharts(data) {
     var selCountry = getSelectorValue('#selected-country');
     var selPollutant = getSelectorValue('#selected-pollutant');
     var selYear = parseInt(getSelectorValue('#selected-year'));
+
+    countryTitle.text(selCountry+", "+selYear);
+    totalTitle.text("Total, "+selYear);
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
