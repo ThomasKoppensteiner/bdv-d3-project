@@ -24,6 +24,10 @@ rect:hover {
     fill-opacity: 1;
 }
 
+rect.selected {
+    fill: red;
+}
+
 .axis {
     font-size: smaller;
 }

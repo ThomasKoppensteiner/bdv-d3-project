@@ -2,10 +2,12 @@ var perHead = false;
 
 // Global vars for main chart, needed in other functions
 var mainMargin, mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
-// Global vars for country chart, needed in other functions
+// Global setup var for country pollution chart, needed in other functions
 var countryChartSetup;
-// Global vars for total chart, needed in other functions
-var totalChartSetup;
+// Global setup var for total pollution chart, needed in other functions
+var totalPollutionChartSetup;
+// Global setup var for total pollution chart, needed in other functions
+var totalCountryChartSetup;
 
 function setupMainChart() {
     mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
@@ -25,10 +27,10 @@ function setupMainChart() {
 
     // Axis setup
     mainXAxis = d3.axisBottom().scale(mainXScale).tickFormat(d3.format("d"));
-    mainGXAxis = mainG.append('g').attr("transform", `translate(0,${mainHeight})`).attr('class', 'x axis').call(mainXAxis);
+    mainGXAxis = mainG.append('g').attr("transform", `translate(0,${mainHeight})`).attr('class', 'x-axis').call(mainXAxis);
 
     mainYAxis = d3.axisLeft().scale(mainYScale);
-    mainGYAxis = mainG.append('g').attr('class', 'y axis').call(mainYAxis);
+    mainGYAxis = mainG.append('g').attr('class', 'y-axis').call(mainYAxis);
 
     // text label for the x axis
     mainG.append("text")
@@ -91,7 +93,7 @@ function createOverlay(){
             // vertical ruler
             d3.select(".mouse-line")
                 .attr("d", function(){
-                    yRange = mainYScale.range(); // range of y axis
+                    yRange = mainYScale.range(); // range of y-axis
                     var xCoor = d3.mouse(this)[0]; // mouse position in x
                     return "M"+ xCoor +"," + yRange[0] + "L" + xCoor + "," + yRange[1];
                 });
@@ -165,17 +167,21 @@ function createMouseCircles(){
 }
 
 function setupCountryChart(){
-    countryChartSetup = setupPercentChart("#sub-country-chart", "Pollutants");
+    countryChartSetup = setupPercentChart("#sub-country-pollution-chart", "Pollutants");
 }
 
-function setupTotalChart(){
-    totalChartSetup = setupPercentChart("#sub-total-chart", "Pollutants");
+function setupTotalPollutionChart(){
+    totalPollutionChartSetup = setupPercentChart("#sub-total-pollution-chart", "Pollutants");
 }
 
-function setupPercentChart(selector, xAxisText){
+function setupTotalCountryChart(){
+    totalCountryChartSetup = setupPercentChart("#sub-total-country-chart", "Countries", 800, 500);
+}
+
+function setupPercentChart(selector, xAxisText, w = 450, h = 350){
     var margin = {top: 60, bottom: 150, left: 120, right: 20};
-    var width = 450 - margin.left - margin.right;
-    var chartHeight = 400 - margin.top - margin.bottom;
+    var width = w - margin.left - margin.right;
+    var chartHeight = h - margin.top - margin.bottom;
 
     // Creates sources <svg> element
     var svg = d3.select(selector).append('svg')
@@ -191,10 +197,10 @@ function setupPercentChart(selector, xAxisText){
 
     // Axis setup
     var xAxis = d3.axisBottom().scale(xScale);
-    var gXAxis = svgGroup.append('g').attr("transform", `translate(0,${chartHeight})`).attr('class', 'x axis');
+    var gXAxis = svgGroup.append('g').attr("transform", `translate(0,${chartHeight})`).attr('class', 'x-axis');
 
     var yAxis = d3.axisLeft().scale(yScale).tickFormat(function(d) { return d+ "%" });
-    var gYAxis = svgGroup.append('g').attr('class', 'y axis');
+    var gYAxis = svgGroup.append('g').attr('class', 'y-axis');
 
     // Title
     chartTitle = svgGroup.append("text")
@@ -204,7 +210,7 @@ function setupPercentChart(selector, xAxisText){
             (0 - 20) + ")")
         .style("text-anchor", "middle");
 
-    // text label for the x axis
+    // text label for the x-axis
     svgGroup.append("text")
         .attr("class", "axis-label sub-chart")
         .attr("transform",
@@ -274,8 +280,9 @@ function updateSubCharts(data) {
     var selPollutant = getSelectorValue('#selected-pollutant');
     var selYear = parseInt(getSelectorValue('#selected-year'));
 
-    countryChartSetup.chartTitle.text(selCountry+", "+selYear);
-    totalChartSetup.chartTitle.text("Total, "+selYear);
+    countryChartSetup.chartTitle.text(selCountry+"s emmissions per pollutat, "+selYear);
+    totalPollutionChartSetup.chartTitle.text("Total emmissions per pollutat, "+selYear);
+    totalCountryChartSetup.chartTitle.text("Total greenhouse gas emissions per country, "+selYear);        
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
@@ -289,7 +296,18 @@ function updateSubCharts(data) {
             }
             return result;
         }).ToArray();
-    updateTotal(totalPollutionsGrouped);
+    updateTotalPollutant(totalPollutionsGrouped);
+
+    var totalCountries= data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant == 'Greenhouse gases' );
+    var totalCountriesGrouped = Enumerable.From(totalCountries).GroupBy("$.country", null,
+        function(key, g) {
+            var result = {
+                country: key,
+                value: g.Sum("$.value")
+            }
+            return result;
+        }).ToArray();
+    updateTotalCountry(totalCountriesGrouped);
 
     initChangeHandlers();
 }
@@ -368,16 +386,45 @@ function updateMain(allData, selectedData) {
 }
 
 function updateCountry(newData) {
-    updatePollutionPercentChart(countryChartSetup, newData);
+    updatePercentChart(countryChartSetup, newData, pollutant, pollutantSelected);
 }
 
-function updateTotal(newData) {
-    updatePollutionPercentChart(totalChartSetup, newData);
+function updateTotalPollutant(newData) {
+    updatePercentChart(totalPollutionChartSetup, newData, pollutant, pollutantSelected);
 }
 
-function updatePollutionPercentChart(chartSetup, newData){
-    //update the scales
+function updateTotalCountry(newData) {
+    updatePercentChart(totalCountryChartSetup, newData, country, countrySelected);
+}
+
+function updatePollutantXScale(chartSetup, newData) {
     chartSetup.xScale.domain(newData.map((d) => d.pollutant));
+}
+
+function updateCountryXScale(chartSetup, newData) {
+    chartSetup.xScale.domain(newData.map((d) => d.country));
+}
+
+function pollutant(d) {
+    return d.pollutant;
+}
+
+function country(d) {
+    return d.country;
+}
+
+function pollutantSelected(d) {
+    return getSelectorValue('#selected-pollutant') == d.pollutant ? "selected" : "un-selected";
+}
+
+function countrySelected(d) {
+    return getSelectorValue('#selected-country') == d.country ? "selected" : "un-selected";
+}
+
+function updatePercentChart(chartSetup, newData, xProperty, xSelected){
+    //update the scales
+    // updateXScale(chartSetup, newData);
+    chartSetup.xScale.domain(newData.map((d) => xProperty(d)));
     chartSetup.yScale.domain([100.0, 0]);
 
     //render the axis
@@ -389,7 +436,7 @@ function updatePollutionPercentChart(chartSetup, newData){
 
     // Render the chart with new data
     // DATA JOIN use the key argument for ensuring that the same DOM element is bound to the same data-item
-    const rect = chartSetup.svgGroup.selectAll('rect').data(newData, (d) => d.country);
+    const rect = chartSetup.svgGroup.selectAll('rect').data(newData, (d) => xProperty(d));
 
     // ENTER
     // new elements
@@ -397,7 +444,7 @@ function updatePollutionPercentChart(chartSetup, newData){
         .attr('x', 0) //set intelligent default values for animation
         .attr('y', 0)
         .attr('width', 0)
-        .attr('height', 0);
+        .attr('height', 0)
     rectEnter.append('title');
 
     var sumOfPollution = d3.sum(newData, (d) => d.value);
@@ -408,7 +455,8 @@ function updatePollutionPercentChart(chartSetup, newData){
         .attr('height', (d) => chartSetup.yScale(100 - (d.value * 100 / sumOfPollution)))
         .attr('width', chartSetup.xScale.bandwidth())
         .attr('y', (d) => chartSetup.chartHeight - chartSetup.yScale(100 - (d.value * 100 / sumOfPollution)))
-        .attr('x', (d) => chartSetup.xScale(d.pollutant));
+        .attr('x', (d) => chartSetup.xScale(xProperty(d)))
+        .attr('class', (d) => xSelected(d));
 
     rect.merge(rectEnter).select('title').text((d) => formatPercent(d.value / sumOfPollution));
 
@@ -457,7 +505,7 @@ function updateLegend(){
     legendRect.exit().remove();
     legendText.exit().remove();
 
-    // y axis label
+    // y-axis label
     mainG.selectAll(".y-axis-label").remove();
     mainG.append("text")
         .attr("class", "axis-label main y-axis-label")
@@ -498,13 +546,37 @@ function initChangeHandlers() {
         updateAll(data);
     });
 
-    d3.select('#sub-country-chart').selectAll('rect').on("click", function(r){
+    // Update selected-pollutant
+    d3.select('#sub-country-pollution-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
         updateAll(data);
     });
 
-    d3.select('#sub-total-chart').selectAll('rect').on("click", function(r){
+    d3.select('#sub-country-pollution-chart').select('.x-axis').selectAll('.tick text').on("click", function(t){
+        d3.select('#selected-pollutant').property("value",t);
+        updateAll(data);
+    });
+
+
+    d3.select('#sub-total-pollution-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-pollutant').property("value",r.pollutant);
+        updateAll(data);
+    });
+
+    d3.select('#sub-total-pollution-chart').select('.x-axis').selectAll('.tick text').on("click", function(t){
+        d3.select('#selected-pollutant').property("value",t);
+        updateAll(data);
+    });
+
+
+    // Update selected-country
+    d3.select('#sub-total-country-chart').selectAll('rect').on("click", function(r){
+        d3.select('#selected-country').property("value",r.country);
+        updateAll(data);
+    });
+
+    d3.select('#sub-total-country-chart').select('.x-axis').selectAll('.tick text').on("click", function(t){
+        d3.select('#selected-country').property("value",t);
         updateAll(data);
     });
 }
@@ -516,8 +588,8 @@ function getSelectorValue(selector){
 // Setup charts
 setupMainChart();
 setupCountryChart();
-setupTotalChart();
-
+setupTotalPollutionChart();
+setupTotalCountryChart();
 
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
