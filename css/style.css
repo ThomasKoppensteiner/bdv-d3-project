@@ -52,11 +52,15 @@ text{
     fill: black;
 }
 
-text.axis-label {
+text.axis-label,text.title-label {
     font-weight: bold;
     font-style: italic;
 }
 
 text.axis-label.main {
     font-size: 18px;
+}
+
+text.title-label.country {
+    font-size: 16px;
 }
