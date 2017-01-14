@@ -2,7 +2,11 @@
 require "csv"
 require "json"
 
-h = {countries: {}}
+countries = []
+
+def to_float(value)
+  value.gsub(".","").gsub(",",".").to_f
+end
 
 CSV.foreach("./GHG_1990_2014.csv", headers: :first_row, col_sep: ";") do |row|
   country   = row[0]
@@ -11,19 +15,9 @@ CSV.foreach("./GHG_1990_2014.csv", headers: :first_row, col_sep: ";") do |row|
   variable  = row[3]
   value     = row[4]
 
-  countries = h[:countries]
-  countries.merge!(country => {years: {}}) unless countries.include?(country)
-  
-  years = countries[country][:years]
-  years.merge!(year => {pollutants: {}}) unless years.include?(year)
-  
-  pollutants = years[year][:pollutants]
-  pollutants.merge!(pollutant => {variables: {}}) unless pollutants.include?(pollutant)
-
-  variables = pollutants[pollutant][:variables]
-  variables.merge!(variable => {value: value.to_f})
+  countries.push(country: country, year: year.to_i, pollutant: pollutant, variable: variable, value: to_float(value))
 end
 
-File.open("./GHG_1990_2014.json", "w") {|f| f.write(JSON.pretty_generate(h)) }
+File.open("./GHG_1990_2014.json", "w") {|f| f.write(JSON.pretty_generate(countries)) }
 
 puts "File './GHG_1990_2014.json' created."
