@@ -301,9 +301,11 @@ function updateSubCharts(data) {
     var totalCountries= data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant == 'Greenhouse gases' );
     var totalCountriesGrouped = Enumerable.From(totalCountries).GroupBy("$.country", null,
         function(key, g) {
+            var population = gPop.filter(p => p.Country===key)[0];
+
             var result = {
                 country: key,
-                value: g.Sum("$.value")
+                value:   (!perHead ? g.Sum("$.value") : (g.Sum("$.value") * 1000 / population[selYear]))
             }
             return result;
         }).ToArray();
@@ -423,7 +425,6 @@ function countrySelected(d) {
 
 function updatePercentChart(chartSetup, newData, xProperty, xSelected){
     //update the scales
-    // updateXScale(chartSetup, newData);
     chartSetup.xScale.domain(newData.map((d) => xProperty(d)));
     chartSetup.yScale.domain([100.0, 0]);
 
@@ -475,7 +476,7 @@ function updateLegend(){
     }
     else {
         legendItems = [
-            { title: 'Global', color: "blue" },
+            { title: 'Global median', color: "blue" },
             { title: getSelectorValue('#selected-country'), color: "red" }];
     }
 
