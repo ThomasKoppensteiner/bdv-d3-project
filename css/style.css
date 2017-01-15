@@ -20,11 +20,15 @@ rect {
     fill-opacity: 0.8;
 }
 
+#sub-pollution-country-chart rect {
+    fill: steelblue;
+}
+
 rect:hover {
     fill-opacity: 1;
 }
 
-rect.selected {
+rect.selected, #sub-pollution-country-chart rect.selected {
     fill: red;
 }
 

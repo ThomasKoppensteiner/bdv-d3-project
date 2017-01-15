@@ -28,14 +28,14 @@ Visit [the projects Github page](https://thomaskoppensteiner.github.io/bdv-d3-pr
 ### Main chart
 The "Main" chart shows the emission of greenhouse gas (in tonnes of CO2 equivalent, Thousands) over time for the selected country and pollutant. The view can toggle between the absolute values and the per-head values. The chart also includes the global mean and median values. By hovering over the chart a ruler appears, which indicates the current values of the lines for the specific year. By clicking on the chart the year on the ruler position is selected an the other charts are updated.
 
-### Country emissions per pollutat chart
-The "Country emissions per pollutant" chart shows the composition of the pollutants (greenhouse gases) for the selected country and the selected year in percent. By clicking either the bar or the pollutantname (label) the selected pollutant changes and the other charts get updated. The selected pollutant is highlighted in red.
+### 'Country' emissions per pollutat chart
+The "'Country' emissions per pollutant" chart shows the composition of the pollutants (greenhouse gases) for the _selected country_ and the _selected year_ in percent. By clicking either the bar or the pollutantname (label) the selected pollutant changes and the other charts get updated. The selected pollutant is highlighted in red.
 
 ### Total emissions per pollutat chart
-The "Total emissions per pollutant" chart shows the composition of the pollutants (greenhouse gases) for all countries in the dataset (global) and the selected year in percent. By clicking either the bar or the pollutantname (label) the selected pollutant changes and the other charts get updated. The selected pollutant is highlighted in red.
+The "Total emissions per pollutant" chart shows the composition of the pollutants (greenhouse gases) for _all countries_ in the dataset (global) and the _selected year_ in percent. By clicking either the bar or the pollutantname (label) the selected pollutant changes and the other charts get updated. The selected pollutant is highlighted in red.
 
-### Total greenhouse gas emissions per country chart
-The "Total greenhouse gas emissions per country" chart shows the portion of the countrys total greenhouse gas (selected pollutant) emission in percent of the total emission for the selected year. By clicking either the bar or the country (label) the selected country changes and the other charts get updated. The selected country is highlighted in red.
+### 'Greenhouse gases' emissions per country chart
+The "'Greenhouse gases' emissions per country" chart shows the portion of the countrys greenhouse gas (_selected pollutant_) emission in percent of the total emission for the _selected year_. By clicking either the bar or the country (label) the selected country changes and the other charts get updated. The selected country is highlighted in red.
 
 ## Findings
 In the year 2005, for example, Austria had a 0.4% share on the emitted greenhouse gases from all countries in the dataset.

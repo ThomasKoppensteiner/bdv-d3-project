@@ -2,12 +2,12 @@ var perHead = false;
 
 // Global vars for main chart, needed in other functions
 var mainMargin, mainWidth, mainHeight, mainXScale, mainYScale, mainGXAxis, mainGYAxis, mainXAxis, mainYAxis, mainG, mouseG;
-// Global setup var for country pollution chart, needed in other functions
-var countryChartSetup;
-// Global setup var for total pollution chart, needed in other functions
+// Global setup var for country emission per pollution chart, needed in other functions
+var countryPollutionChartSetup;
+// Global setup var for total emission per pollution chart, needed in other functions
 var totalPollutionChartSetup;
-// Global setup var for total pollution chart, needed in other functions
-var totalCountryChartSetup;
+// Global setup var for pollution per country chart, needed in other functions
+var pollutionCountryChartSetup;
 
 function setupMainChart() {
     mainMargin = {top: 10, bottom: 90, left: 100, right: 25};
@@ -167,15 +167,15 @@ function createMouseCircles(){
 }
 
 function setupCountryChart(){
-    countryChartSetup = setupPercentChart("#sub-country-pollution-chart", "Pollutants");
+    countryPollutionChartSetup = setupPercentChart("#sub-country-pollution-chart", "Pollutants");
 }
 
 function setupTotalPollutionChart(){
     totalPollutionChartSetup = setupPercentChart("#sub-total-pollution-chart", "Pollutants");
 }
 
-function setupTotalCountryChart(){
-    totalCountryChartSetup = setupPercentChart("#sub-total-country-chart", "Countries", 800, 500);
+function setupPollutionCountryChart(){
+    pollutionCountryChartSetup = setupPercentChart("#sub-pollution-country-chart", "Countries", 800, 500);
 }
 
 function setupPercentChart(selector, xAxisText, w = 450, h = 350){
@@ -280,9 +280,10 @@ function updateSubCharts(data) {
     var selPollutant = getSelectorValue('#selected-pollutant');
     var selYear = parseInt(getSelectorValue('#selected-year'));
 
-    countryChartSetup.chartTitle.text(selCountry+"s emissions per pollutat, "+selYear);
+    countryPollutionChartSetup.chartTitle.text(selCountry+"s emissions per pollutat, "+selYear);
     totalPollutionChartSetup.chartTitle.text("Total emissions per pollutat, "+selYear);
-    totalCountryChartSetup.chartTitle.text("Total " + selPollutant + " emissions per country, "+selYear);        
+    var prefix = selPollutant == 'Greenhouse gases' ? "Total " : "";
+    pollutionCountryChartSetup.chartTitle.text(prefix + selPollutant + " emissions per country, "+selYear);        
 
     var countryPollutions = data.filter((d) => d.country === selCountry && d.year === selYear && d.variable === 'TOTAL' && d.pollutant != 'Greenhouse gases' );
     updateCountry(countryPollutions);
@@ -298,8 +299,8 @@ function updateSubCharts(data) {
         }).ToArray();
     updateTotalPollutant(totalPollutionsGrouped);
 
-    var totalCountries= data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant === selPollutant );
-    var totalCountriesGrouped = Enumerable.From(totalCountries).GroupBy("$.country", null,
+    var pollutionsCountries = data.filter((d) => d.year === selYear && d.variable === 'TOTAL' && d.pollutant === selPollutant );
+    var pollutionsCountriesGrouped = Enumerable.From(pollutionsCountries).GroupBy("$.country", null,
         function(key, g) {
             var population = gPop.filter(p => p.Country===key)[0];
 
@@ -309,7 +310,7 @@ function updateSubCharts(data) {
             }
             return result;
         }).ToArray();
-    updateTotalCountry(totalCountriesGrouped);
+    updatePollutionCountry(pollutionsCountriesGrouped);
 
     initChangeHandlers();
 }
@@ -388,15 +389,15 @@ function updateMain(allData, selectedData) {
 }
 
 function updateCountry(newData) {
-    updatePercentChart(countryChartSetup, newData, pollutant, pollutantSelected);
+    updatePercentChart(countryPollutionChartSetup, newData, pollutant, pollutantSelected);
 }
 
 function updateTotalPollutant(newData) {
     updatePercentChart(totalPollutionChartSetup, newData, pollutant, pollutantSelected);
 }
 
-function updateTotalCountry(newData) {
-    updatePercentChart(totalCountryChartSetup, newData, country, countrySelected);
+function updatePollutionCountry(newData) {
+    updatePercentChart(pollutionCountryChartSetup, newData, country, countrySelected);
 }
 
 function updatePollutantXScale(chartSetup, newData) {
@@ -571,12 +572,12 @@ function initChangeHandlers() {
 
 
     // Update selected-country
-    d3.select('#sub-total-country-chart').selectAll('rect').on("click", function(r){
+    d3.select('#sub-pollution-country-chart').selectAll('rect').on("click", function(r){
         d3.select('#selected-country').property("value",r.country);
         updateAll(data);
     });
 
-    d3.select('#sub-total-country-chart').select('.x-axis').selectAll('.tick text').on("click", function(t){
+    d3.select('#sub-pollution-country-chart').select('.x-axis').selectAll('.tick text').on("click", function(t){
         d3.select('#selected-country').property("value",t);
         updateAll(data);
     });
@@ -586,11 +587,16 @@ function getSelectorValue(selector){
     return d3.select(selector).property("value");
 }
 
+function setDefaultSelectorValues(){
+    d3.select('#selected-country').property("value","Austria");
+    d3.select('#selected-pollutant').property("value","Greenhouse gases");    
+}
+
 // Setup charts
 setupMainChart();
 setupCountryChart();
 setupTotalPollutionChart();
-setupTotalCountryChart();
+setupPollutionCountryChart();
 
 d3.json('data/GHG_1990_2014.json', (error, data) => {
     if (error) throw error;
@@ -599,6 +605,7 @@ d3.json('data/GHG_1990_2014.json', (error, data) => {
         gPop = popData;
 
         fillSelectors(data);
+        setDefaultSelectorValues();
         updateAll(data);
     });
 });
