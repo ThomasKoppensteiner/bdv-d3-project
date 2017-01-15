@@ -266,7 +266,7 @@ function updateAll(data) {
         return {
             year: r.year,
             value: r.value,
-            phead: 1000 * r.value / popSelected[r.year]
+            phead: 1000 * (r.value / popSelected[r.year])
         };
     });
 
