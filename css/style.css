@@ -44,6 +44,11 @@ rect.selected, #sub-pollution-country-chart rect.selected {
     fill: none;
     pointer-events: all;
     margin-left: 120px;
+    cursor: pointer;
+}
+
+rect, text.mousepointer{
+    cursor: pointer;
 }
 
 .focus circle {

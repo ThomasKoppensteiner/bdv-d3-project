@@ -431,6 +431,7 @@ function updatePercentChart(chartSetup, newData, xProperty, xSelected){
 
     //render the axis
     chartSetup.gXAxis.call(chartSetup.xAxis).selectAll("text").style("text-anchor", "end")
+        .attr("class", "mousepointer")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .attr("transform", "rotate(-65)");
