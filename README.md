@@ -58,4 +58,4 @@ Starting a simple python static webserver: `python -m SimpleHTTPServer`
 Open [http://localhost:8000](http://localhost:8000) to explore the project.
 
 ## Disclaimer
-This is a study project. Although we worked conscientious the shown data might be inconsistent or wrong. Please do not rely on the it.
+This is a study project. Although we worked conscientious the shown data might be inconsistent or wrong. Please do not rely on it.
